@@ -1,0 +1,5 @@
+build/
+*.zip
+schemas/gschemas.compiled
+.system_generated/
+.DS_Store

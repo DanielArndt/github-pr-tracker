@@ -1,0 +1,198 @@
+/* SPDX-FileCopyrightText: 2026 Daniel Arndt <dan@arndt.ca> */
+/* SPDX-License-Identifier: GPL-2.0-or-later */
+
+/* GitHub PR Tracker Stylesheet */
+
+/* Top Bar Panel Badges (Subtle, neutral GNOME styling) */
+.pr-panel-box {
+    spacing: 4px;
+}
+
+.pr-panel-icon {
+    icon-size: 16px;
+    margin-right: 2px;
+}
+
+.pr-panel-badge-box {
+    spacing: 3px;
+}
+
+.pr-panel-pill {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #e6e6e6;
+    border-radius: 9px;
+    padding: 1px 6px;
+    font-size: 10.5px;
+    font-weight: 600;
+}
+
+/* Dropdown Menu Header & Status */
+.pr-user-header {
+    font-size: 13px;
+    font-weight: bold;
+    padding-bottom: 2px;
+}
+
+.pr-status-item {
+    font-size: 11px;
+    color: #f6c177;
+}
+
+/* Collapsible Section Header */
+.pr-section-header {
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.pr-section-icon {
+    icon-size: 14px;
+    margin-right: 6px;
+}
+
+.pr-section-count-badge {
+    background-color: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    border-radius: 9px;
+    padding: 1px 7px;
+    margin-left: 6px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.pr-section-count-badge.empty {
+    opacity: 0.45;
+}
+
+/* PR Row Item */
+.pr-menu-item {
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.pr-item-box {
+    spacing: 3px;
+    width: 380px;
+}
+
+.pr-header-box {
+    spacing: 4px;
+}
+
+.pr-repo-label {
+    font-weight: bold;
+    font-size: 11px;
+    color: #78a9ff;
+}
+
+.pr-number-label {
+    font-size: 11px;
+    color: #999999;
+}
+
+.pr-author-label {
+    font-size: 11px;
+    color: #aaaaaa;
+}
+
+.pr-time-label {
+    font-size: 10px;
+    color: #888888;
+}
+
+.pr-title-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #f0f0f0;
+}
+
+.pr-empty-item {
+    font-style: italic;
+    color: #888888;
+    font-size: 11px;
+}
+
+/* PR Reason and Status Pills (in dropdown) */
+.pr-tags-box {
+    spacing: 4px;
+    margin-top: 2px;
+}
+
+.pr-tag {
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.pr-tag-changes-requested {
+    background-color: rgba(235, 70, 70, 0.22);
+    color: #ff8e8e;
+    border: 1px solid rgba(235, 70, 70, 0.45);
+}
+
+.pr-tag-ci-failed {
+    background-color: rgba(220, 50, 50, 0.22);
+    color: #ff7b7b;
+    border: 1px solid rgba(220, 50, 50, 0.45);
+}
+
+.pr-tag-conflict {
+    background-color: rgba(235, 130, 40, 0.22);
+    color: #ffb169;
+    border: 1px solid rgba(235, 130, 40, 0.45);
+}
+
+.pr-tag-unresolved {
+    background-color: rgba(225, 175, 25, 0.22);
+    color: #ffd466;
+    border: 1px solid rgba(225, 175, 25, 0.45);
+}
+
+.pr-tag-approved {
+    background-color: rgba(46, 185, 90, 0.22);
+    color: #72e8a1;
+    border: 1px solid rgba(46, 185, 90, 0.45);
+}
+
+.pr-tag-review-requested {
+    background-color: rgba(65, 145, 235, 0.22);
+    color: #91c6ff;
+    border: 1px solid rgba(65, 145, 235, 0.45);
+}
+
+.pr-tag-rereview {
+    background-color: rgba(150, 95, 230, 0.22);
+    color: #c9a7ff;
+    border: 1px solid rgba(150, 95, 230, 0.45);
+}
+
+.pr-tag-draft {
+    background-color: rgba(140, 140, 140, 0.2);
+    color: #cccccc;
+    border: 1px solid rgba(140, 140, 140, 0.35);
+}
+
+.pr-tag-default {
+    background-color: rgba(120, 120, 120, 0.2);
+    color: #e0e0e0;
+}
+
+/* Footer Items */
+.pr-footer-item {
+    padding-top: 3px;
+    padding-bottom: 3px;
+}
+
+.pr-footer-box {
+    spacing: 6px;
+}
+
+.pr-footer-time-label {
+    font-size: 11px;
+    color: #888888;
+}
+
+.pr-footer-btn {
+    padding: 3px 6px;
+    border-radius: 6px;
+}

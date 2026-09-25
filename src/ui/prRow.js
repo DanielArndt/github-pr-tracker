@@ -1,0 +1,161 @@
+// SPDX-FileCopyrightText: 2026 Daniel Arndt <dan@arndt.ca>
+// SPDX-License-Identifier: GPL-2.0-or-later
+
+import GObject from 'gi://GObject';
+import St from 'gi://St';
+import Clutter from 'gi://Clutter';
+import Pango from 'gi://Pango';
+import Gio from 'gi://Gio';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+
+/**
+ * Format relative time (e.g. "2h ago", "3d ago").
+ * @param {Date} date
+ * @returns {string}
+ */
+function formatRelativeTime(date) {
+    if (!date || isNaN(date.getTime())) {
+        return '';
+    }
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (seconds < 60) return 'just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days}d ago`;
+    const months = Math.floor(days / 30);
+    return `${months}mo ago`;
+}
+
+/**
+ * Maps reason string to a CSS class name.
+ * @param {string} reason
+ * @returns {string}
+ */
+function reasonToCssClass(reason) {
+    switch (reason) {
+        case 'Changes Requested':
+            return 'pr-tag-changes-requested';
+        case 'CI Failed':
+            return 'pr-tag-ci-failed';
+        case 'Conflicts':
+            return 'pr-tag-conflict';
+        case 'Unresolved Comments':
+            return 'pr-tag-unresolved';
+        case 'Approved':
+            return 'pr-tag-approved';
+        case 'Review Requested':
+            return 'pr-tag-review-requested';
+        case 'Awaiting Re-review':
+            return 'pr-tag-rereview';
+        case 'Draft':
+            return 'pr-tag-draft';
+        default:
+            return 'pr-tag-default';
+    }
+}
+
+export const PRRow = GObject.registerClass(
+class PRRow extends PopupMenu.PopupBaseMenuItem {
+    _init(prItem, params = {}) {
+        super._init(params);
+        this.add_style_class_name('pr-menu-item');
+        this._pr = prItem;
+
+        const mainBox = new St.BoxLayout({
+            vertical: true,
+            x_expand: true,
+            style_class: 'pr-item-box',
+        });
+
+        // Top line: Repo name, PR number, author, relative time
+        const headerBox = new St.BoxLayout({
+            vertical: false,
+            x_expand: true,
+            style_class: 'pr-header-box',
+        });
+
+        const repoLabel = new St.Label({
+            text: prItem.repoName || '',
+            style_class: 'pr-repo-label',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+
+        const numLabel = new St.Label({
+            text: ` #${prItem.number}`,
+            style_class: 'pr-number-label',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+
+        const authorLabel = new St.Label({
+            text: ` by @${prItem.author}`,
+            style_class: 'pr-author-label',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+
+        const timeSpacer = new St.Bin({
+            x_expand: true,
+        });
+
+        const timeLabel = new St.Label({
+            text: formatRelativeTime(prItem.updatedAt),
+            style_class: 'pr-time-label',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+
+        headerBox.add_child(repoLabel);
+        headerBox.add_child(numLabel);
+        headerBox.add_child(authorLabel);
+        headerBox.add_child(timeSpacer);
+        headerBox.add_child(timeLabel);
+
+        // Middle line: PR Title
+        const titleLabel = new St.Label({
+            text: prItem.title || '(No title)',
+            style_class: 'pr-title-label',
+            x_expand: true,
+        });
+        titleLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        titleLabel.clutter_text.line_wrap = false;
+
+        // Bottom line: Reason pills
+        const tagsBox = new St.BoxLayout({
+            vertical: false,
+            style_class: 'pr-tags-box',
+        });
+
+        const reasons = prItem.reasons && prItem.reasons.length > 0 ? prItem.reasons : [];
+        for (const reason of reasons) {
+            const tagLabel = new St.Label({
+                text: reason,
+                style_class: `pr-tag ${reasonToCssClass(reason)}`,
+                y_align: Clutter.ActorAlign.CENTER,
+            });
+            tagsBox.add_child(tagLabel);
+        }
+
+        mainBox.add_child(headerBox);
+        mainBox.add_child(titleLabel);
+        if (reasons.length > 0) {
+            mainBox.add_child(tagsBox);
+        }
+
+        this.add_child(mainBox);
+
+        // Connect click action to open PR in default browser
+        this.connect('activate', () => {
+            this._openPR();
+        });
+    }
+
+    _openPR() {
+        if (!this._pr || !this._pr.url) return;
+        try {
+            Gio.AppInfo.launch_default_for_uri(this._pr.url, null);
+        } catch (err) {
+            console.error(`[GitHub PR Tracker] Failed to open URL ${this._pr.url}:`, err);
+        }
+    }
+});

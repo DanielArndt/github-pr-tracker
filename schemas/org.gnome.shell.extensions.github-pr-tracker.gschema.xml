@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.github-pr-tracker" path="/org/gnome/shell/extensions/github-pr-tracker/">
+    <key name="refresh-interval" type="i">
+      <default>5</default>
+      <range min="1" max="60"/>
+      <summary>Refresh interval in minutes</summary>
+      <description>Time in minutes between background polling of GitHub PR data.</description>
+    </key>
+
+    <key name="include-repos" type="s">
+      <default>""</default>
+      <summary>Repositories to include</summary>
+      <description>Comma-separated list of repo names or patterns (e.g. 'canonical/*', 'user/repo'). If empty, all accessible repos are included.</description>
+    </key>
+
+    <key name="exclude-repos" type="s">
+      <default>""</default>
+      <summary>Repositories to exclude</summary>
+      <description>Comma-separated list of repository names or patterns to ignore.</description>
+    </key>
+
+    <key name="ignore-archived" type="b">
+      <default>true</default>
+      <summary>Ignore archived repositories</summary>
+      <description>Whether to exclude PRs belonging to archived repositories.</description>
+    </key>
+
+    <key name="ignore-forks" type="b">
+      <default>false</default>
+      <summary>Ignore forked repositories</summary>
+      <description>Whether to exclude PRs belonging to fork repositories.</description>
+    </key>
+
+    <key name="last-username" type="s">
+      <default>""</default>
+      <summary>Last detected GitHub username</summary>
+      <description>Cached login of the authenticated GitHub account.</description>
+    </key>
+  </schema>
+</schemalist>

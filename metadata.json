@@ -1,0 +1,17 @@
+{
+  "uuid": "github-pr-tracker@dan.arndt.ca",
+  "name": "GitHub PR Tracker",
+  "description": "Track pull requests, required actions, reviews, and drafts for your GitHub account.",
+  "shell-version": [
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50"
+  ],
+  "settings-schema": "org.gnome.shell.extensions.github-pr-tracker",
+  "gettext-domain": "github-pr-tracker",
+  "url": "https://github.com",
+  "version": 1
+}
