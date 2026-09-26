@@ -214,6 +214,29 @@ function makePR(overrides = {}) {
     assertEqual(pr.reasons, ['Awaiting Re-review'], 'Reason is Awaiting Re-review');
 }
 
+// 12. Needs My Review: Team review request excluded by default
+{
+    const pr = new PRItem(makePR({
+        author: { login: 'bob' },
+        reviewRequests: {
+            nodes: [{ requestedReviewer: { __typename: 'Team' } }],
+        },
+    }), viewerLogin, { includeTeamReviews: false });
+    assertEqual(pr.category, null, 'Team review excluded when includeTeamReviews is false');
+}
+
+// 13. Needs My Review: Team review request included when enabled
+{
+    const pr = new PRItem(makePR({
+        author: { login: 'bob' },
+        reviewRequests: {
+            nodes: [{ requestedReviewer: { __typename: 'Team' } }],
+        },
+    }), viewerLogin, { includeTeamReviews: true });
+    assertEqual(pr.category, CATEGORIES.NEEDS_MY_REVIEW, 'Team review included when includeTeamReviews is true');
+    assertEqual(pr.reasons, ['Team Review'], 'Reason is Team Review');
+}
+
 console.log('\n--- Testing RepoFilter ---');
 
 // 12. Include filter

@@ -42,6 +42,7 @@ export default class GitHubPRExtension extends Extension {
             this._settings.connect('changed::exclude-repos', () => this._onFilterSettingsChanged()),
             this._settings.connect('changed::ignore-archived', () => this._onFilterSettingsChanged()),
             this._settings.connect('changed::ignore-forks', () => this._onFilterSettingsChanged()),
+            this._settings.connect('changed::include-team-reviews', () => this._onFilterSettingsChanged()),
         ];
 
         // Load token from keyring and start
@@ -73,8 +74,12 @@ export default class GitHubPRExtension extends Extension {
             ignoreForks: this._settings.get_boolean('ignore-forks'),
         });
 
-        // Re-filter cached PR items without making another network request
-        if (this._rawPRItems.length > 0) {
+        // Re-classify and re-filter cached PR items without making another network request
+        if (this._rawNodes && this._rawNodes.length > 0) {
+            const includeTeamReviews = this._settings.get_boolean('include-team-reviews');
+            this._rawPRItems = this._rawNodes.map(
+                node => new PRItem(node, this._viewerLogin, { includeTeamReviews })
+            );
             this._applyFilterAndDisplay(this._rawPRItems);
         }
     }
@@ -155,8 +160,10 @@ export default class GitHubPRExtension extends Extension {
                 if (node && node.id) rawNodesMap.set(node.id, node);
             }
 
-            this._rawPRItems = Array.from(rawNodesMap.values()).map(
-                node => new PRItem(node, this._viewerLogin)
+            this._rawNodes = Array.from(rawNodesMap.values());
+            const includeTeamReviews = this._settings.get_boolean('include-team-reviews');
+            this._rawPRItems = this._rawNodes.map(
+                node => new PRItem(node, this._viewerLogin, { includeTeamReviews })
             );
 
             this._applyFilterAndDisplay(this._rawPRItems);
@@ -173,7 +180,7 @@ export default class GitHubPRExtension extends Extension {
      * @param {Array<PRItem>} prItems
      */
     _applyFilterAndDisplay(prItems) {
-        const filtered = prItems.filter(item => this._repoFilter.matches(item));
+        const filtered = prItems.filter(item => item && item.category && this._repoFilter.matches(item));
 
         const categorizedMap = new Map();
         for (const catId of Object.values(CATEGORIES)) {

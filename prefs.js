@@ -162,6 +162,13 @@ export default class GitHubPRExtensionPreferences extends ExtensionPreferences {
         settings.bind('ignore-forks', forksRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         filterGroup.add(forksRow);
 
+        const teamReviewsRow = new Adw.SwitchRow({
+            title: 'Include Team Review Requests',
+            subtitle: 'Include pull requests requested from teams you belong to, in addition to direct requests',
+        });
+        settings.bind('include-team-reviews', teamReviewsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        filterGroup.add(teamReviewsRow);
+
         // --- Group 3: Polling & Behavior ---
         const behaviorGroup = new Adw.PreferencesGroup({
             title: 'Behavior and Polling',

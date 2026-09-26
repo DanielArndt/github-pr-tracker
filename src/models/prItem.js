@@ -192,8 +192,10 @@ export class PRItem {
     /**
      * @param {Object} rawNode GraphQL PullRequest node
      * @param {string} viewerLogin Login of authenticated user
+     * @param {Object} [options]
+     * @param {boolean} [options.includeTeamReviews=false]
      */
-    constructor(rawNode, viewerLogin) {
+    constructor(rawNode, viewerLogin, options = {}) {
         this.id = rawNode.id;
         this.number = rawNode.number;
         this.title = rawNode.title || '';
@@ -215,16 +217,18 @@ export class PRItem {
         this.isAuthoredByViewer = this.author.toLowerCase() === (viewerLogin || '').toLowerCase();
 
         this.reasons = [];
-        this.category = this._classify(rawNode, viewerLogin);
+        this.category = this._classify(rawNode, viewerLogin, options);
     }
 
     /**
      * Classifies the PR into one of the 5 categories and computes reason tags.
      * @param {Object} rawNode
      * @param {string} viewerLogin
-     * @returns {string} Category ID
+     * @param {Object} [options]
+     * @param {boolean} [options.includeTeamReviews=false]
+     * @returns {string|null} Category ID or null if excluded
      */
-    _classify(rawNode, viewerLogin) {
+    _classify(rawNode, viewerLogin, options = {}) {
         const viewerLower = (viewerLogin || '').toLowerCase();
         const reviewThreads = rawNode.reviewThreads?.nodes || [];
         const latestReviews = rawNode.latestReviews?.nodes || [];
@@ -303,8 +307,13 @@ export class PRItem {
             return CATEGORIES.NEEDS_MY_REVIEW;
         }
 
-        // Default reason for PRs in Needs My Review
-        this.reasons.push('Review Requested');
-        return CATEGORIES.NEEDS_MY_REVIEW;
+        const includeTeamReviews = options.includeTeamReviews ?? false;
+        if (includeTeamReviews) {
+            this.reasons.push('Team Review');
+            return CATEGORIES.NEEDS_MY_REVIEW;
+        }
+
+        // Not directly requested, not previously reviewed, and team reviews disabled
+        return null;
     }
 }

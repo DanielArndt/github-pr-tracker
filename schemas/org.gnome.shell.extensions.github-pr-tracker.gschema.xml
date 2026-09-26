@@ -32,6 +32,12 @@
       <description>Whether to exclude PRs belonging to fork repositories.</description>
     </key>
 
+    <key name="include-team-reviews" type="b">
+      <default>false</default>
+      <summary>Include team review requests</summary>
+      <description>Whether to include pull requests where review was requested from a team rather than directly from you.</description>
+    </key>
+
     <key name="last-username" type="s">
       <default>""</default>
       <summary>Last detected GitHub username</summary>
