@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 export const CATEGORIES = {
-    ACTION_REQUIRED: 'action_required',
-    NEEDS_MY_REVIEW: 'needs_my_review',
-    READY_TO_MERGE: 'ready_to_merge',
-    WAITING_REVIEW: 'waiting_review',
-    DRAFT: 'draft',
+    ACTION_REQUIRED: 'ACTION_REQUIRED',
+    NEEDS_MY_REVIEW: 'NEEDS_MY_REVIEW',
+    READY_TO_MERGE: 'READY_TO_MERGE',
+    WAITING_REVIEW: 'WAITING_REVIEW',
+    DRAFT: 'DRAFT',
 };
 
 export const CATEGORY_METADATA = {
@@ -28,7 +28,7 @@ export const CATEGORY_METADATA = {
         id: CATEGORIES.READY_TO_MERGE,
         title: 'Ready to Merge',
         symbol: '✓',
-        iconName: 'emblem-ok-symbolic',
+        iconName: 'emblem-default-symbolic',
         defaultExpanded: true,
     },
     [CATEGORIES.WAITING_REVIEW]: {
@@ -48,33 +48,72 @@ export const CATEGORY_METADATA = {
 };
 
 /**
- * Checks if a commit rollup has failing required checks.
- * @param {Object} commitNode
+ * Checks if a PR has failing required checks.
+ * @param {Object} rawNode
  * @returns {boolean}
  */
-function hasFailingRequiredChecks(commitNode) {
-    if (!commitNode || !commitNode.statusCheckRollup) {
+function hasFailingRequiredChecks(rawNode) {
+    if (!rawNode) return false;
+
+    const statusRollup = rawNode.statusCheckRollup || rawNode.commits?.nodes?.[0]?.commit?.statusCheckRollup;
+    if (!statusRollup) {
         return false;
     }
 
-    const contexts = commitNode.statusCheckRollup.contexts?.nodes || [];
-    for (const ctx of contexts) {
-        if (!ctx.isRequired) {
-            continue;
-        }
+    const contexts = statusRollup.contexts?.nodes || [];
+    const requiredContexts = rawNode.baseRef?.branchProtectionRule?.requiredStatusCheckContexts || [];
 
-        // For CheckRun
-        if (ctx.__typename === 'CheckRun') {
-            const badConclusions = ['FAILURE', 'TIMED_OUT', 'CANCELLED', 'ACTION_REQUIRED'];
-            if (badConclusions.includes(ctx.conclusion)) {
-                return true;
+    // 1. If branch protection specifies required check contexts
+    if (requiredContexts.length > 0) {
+        for (const ctx of contexts) {
+            const name = ctx.name || ctx.context;
+            if (requiredContexts.includes(name)) {
+                if (ctx.__typename === 'CheckRun') {
+                    const badConclusions = ['FAILURE', 'TIMED_OUT', 'CANCELLED', 'ACTION_REQUIRED'];
+                    if (badConclusions.includes(ctx.conclusion)) {
+                        return true;
+                    }
+                }
+                if (ctx.__typename === 'StatusContext') {
+                    const badStates = ['FAILURE', 'ERROR'];
+                    if (badStates.includes(ctx.state)) {
+                        return true;
+                    }
+                }
             }
         }
+        return false;
+    }
 
-        // For StatusContext
-        if (ctx.__typename === 'StatusContext') {
-            const badStates = ['FAILURE', 'ERROR'];
-            if (badStates.includes(ctx.state)) {
+    // 2. Explicit isRequired property (from unit test mocks or specific queries)
+    const hasExplicitIsRequired = contexts.some(c => c.isRequired !== undefined);
+    if (hasExplicitIsRequired) {
+        for (const ctx of contexts) {
+            if (ctx.isRequired) {
+                if (ctx.__typename === 'CheckRun') {
+                    const badConclusions = ['FAILURE', 'TIMED_OUT', 'CANCELLED', 'ACTION_REQUIRED'];
+                    if (badConclusions.includes(ctx.conclusion)) {
+                        return true;
+                    }
+                }
+                if (ctx.__typename === 'StatusContext') {
+                    const badStates = ['FAILURE', 'ERROR'];
+                    if (badStates.includes(ctx.state)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    // 3. GitHub mergeStateStatus: BLOCKED indicates required status checks or reviews are blocking merge
+    if (rawNode.mergeStateStatus === 'BLOCKED' && (statusRollup.state === 'FAILURE' || statusRollup.state === 'ERROR')) {
+        for (const ctx of contexts) {
+            if (ctx.__typename === 'CheckRun' && ['FAILURE', 'TIMED_OUT', 'CANCELLED', 'ACTION_REQUIRED'].includes(ctx.conclusion)) {
+                return true;
+            }
+            if (ctx.__typename === 'StatusContext' && ['FAILURE', 'ERROR'].includes(ctx.state)) {
                 return true;
             }
         }
@@ -85,22 +124,34 @@ function hasFailingRequiredChecks(commitNode) {
 
 /**
  * Checks if all required checks are completed and passing.
- * @param {Object} commitNode
+ * @param {Object} rawNode
  * @returns {boolean}
  */
-function areRequiredChecksPassing(commitNode) {
-    if (!commitNode || !commitNode.statusCheckRollup) {
+function areRequiredChecksPassing(rawNode) {
+    if (!rawNode) return true;
+
+    const statusRollup = rawNode.statusCheckRollup || rawNode.commits?.nodes?.[0]?.commit?.statusCheckRollup;
+    if (!statusRollup) {
         return true;
     }
 
-    const rollupState = commitNode.statusCheckRollup.state;
-    if (rollupState === 'FAILURE' || rollupState === 'ERROR') {
-        return false;
+    if (statusRollup.state === 'SUCCESS') {
+        return true;
     }
 
-    const contexts = commitNode.statusCheckRollup.contexts?.nodes || [];
-    for (const ctx of contexts) {
-        if (ctx.isRequired) {
+    if (rawNode.mergeStateStatus === 'CLEAN' || rawNode.mergeStateStatus === 'HAS_HOOKS') {
+        return true;
+    }
+
+    const contexts = statusRollup.contexts?.nodes || [];
+    const requiredContexts = rawNode.baseRef?.branchProtectionRule?.requiredStatusCheckContexts || [];
+
+    if (requiredContexts.length > 0) {
+        for (const reqName of requiredContexts) {
+            const ctx = contexts.find(c => (c.name || c.context) === reqName);
+            if (!ctx) {
+                return false;
+            }
             if (ctx.__typename === 'CheckRun' && ctx.conclusion !== 'SUCCESS' && ctx.conclusion !== 'NEUTRAL') {
                 return false;
             }
@@ -108,9 +159,30 @@ function areRequiredChecksPassing(commitNode) {
                 return false;
             }
         }
+        return true;
     }
 
-    return true;
+    const hasExplicitIsRequired = contexts.some(c => c.isRequired !== undefined);
+    if (hasExplicitIsRequired) {
+        for (const ctx of contexts) {
+            if (ctx.isRequired) {
+                if (ctx.__typename === 'CheckRun' && ctx.conclusion !== 'SUCCESS' && ctx.conclusion !== 'NEUTRAL') {
+                    return false;
+                }
+                if (ctx.__typename === 'StatusContext' && ctx.state !== 'SUCCESS') {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    // UNSTABLE means mergeable with non-passing commit status (i.e. only optional checks failed)
+    if (rawNode.mergeStateStatus === 'UNSTABLE') {
+        return true;
+    }
+
+    return false;
 }
 
 /**
@@ -128,6 +200,7 @@ export class PRItem {
         this.url = rawNode.url;
         this.isDraft = !!rawNode.isDraft;
         this.mergeable = rawNode.mergeable || 'UNKNOWN';
+        this.mergeStateStatus = rawNode.mergeStateStatus || 'UNKNOWN';
         this.reviewDecision = rawNode.reviewDecision || null;
         this.updatedAt = rawNode.updatedAt ? new Date(rawNode.updatedAt) : new Date();
         this.createdAt = rawNode.createdAt ? new Date(rawNode.createdAt) : new Date();
@@ -153,7 +226,6 @@ export class PRItem {
      */
     _classify(rawNode, viewerLogin) {
         const viewerLower = (viewerLogin || '').toLowerCase();
-        const latestCommit = rawNode.commits?.nodes?.[0]?.commit || null;
         const reviewThreads = rawNode.reviewThreads?.nodes || [];
         const latestReviews = rawNode.latestReviews?.nodes || [];
         const reviewRequests = rawNode.reviewRequests?.nodes || [];
@@ -177,7 +249,7 @@ export class PRItem {
             }
 
             // B. Required CI Check Failure
-            if (hasFailingRequiredChecks(latestCommit)) {
+            if (hasFailingRequiredChecks(rawNode)) {
                 actionReasons.push('CI Failed');
             }
 
@@ -200,7 +272,7 @@ export class PRItem {
             // E. Ready to Merge
             const isApproved = this.reviewDecision === 'APPROVED';
             const canMerge = this.mergeable !== 'CONFLICTING';
-            const ciPassing = areRequiredChecksPassing(latestCommit);
+            const ciPassing = areRequiredChecksPassing(rawNode);
 
             if (isApproved && canMerge && ciPassing && !hasUnresolvedComments) {
                 this.reasons = ['Approved'];
@@ -231,8 +303,8 @@ export class PRItem {
             return CATEGORIES.NEEDS_MY_REVIEW;
         }
 
-        // Fallback if returned in search
-        this.reasons.push('Review Needed');
+        // Default reason for PRs in Needs My Review
+        this.reasons.push('Review Requested');
         return CATEGORIES.NEEDS_MY_REVIEW;
     }
 }

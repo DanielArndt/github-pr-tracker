@@ -9,6 +9,7 @@ fragment PRDetails on PullRequest {
   url
   isDraft
   mergeable
+  mergeStateStatus
   reviewDecision
   updatedAt
   createdAt
@@ -21,11 +22,21 @@ fragment PRDetails on PullRequest {
     login
     avatarUrl
   }
+  baseRef {
+    name
+    branchProtectionRule {
+      requiredStatusCheckContexts
+    }
+  }
   reviewRequests(first: 20) {
     nodes {
       requestedReviewer {
         ... on User {
           login
+        }
+        ... on Team {
+          name
+          slug
         }
       }
     }
@@ -44,27 +55,19 @@ fragment PRDetails on PullRequest {
       isResolved
     }
   }
-  commits(last: 1) {
-    nodes {
-      commit {
-        statusCheckRollup {
+  statusCheckRollup {
+    state
+    contexts(first: 50) {
+      nodes {
+        __typename
+        ... on CheckRun {
+          name
+          conclusion
+          status
+        }
+        ... on StatusContext {
+          context
           state
-          contexts(first: 50) {
-            nodes {
-              __typename
-              ... on CheckRun {
-                name
-                conclusion
-                status
-                isRequired
-              }
-              ... on StatusContext {
-                context
-                state
-                isRequired
-              }
-            }
-          }
         }
       }
     }
