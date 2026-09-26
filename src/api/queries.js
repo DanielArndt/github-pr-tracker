@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Daniel Arndt <dan@arndt.ca>
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-export const PR_FRAGMENT = `
-fragment PRDetails on PullRequest {
+export const AUTHORED_PR_FRAGMENT = `
+fragment AuthoredPRDetails on PullRequest {
   id
   number
   title
@@ -28,20 +28,17 @@ fragment PRDetails on PullRequest {
       requiredStatusCheckContexts
     }
   }
-  reviewRequests(first: 20) {
+  reviewRequests(first: 10) {
     nodes {
       requestedReviewer {
+        __typename
         ... on User {
           login
-        }
-        ... on Team {
-          name
-          slug
         }
       }
     }
   }
-  latestReviews(last: 20) {
+  latestReviews(last: 10) {
     nodes {
       author {
         login
@@ -50,14 +47,14 @@ fragment PRDetails on PullRequest {
       createdAt
     }
   }
-  reviewThreads(first: 50) {
+  reviewThreads(first: 20) {
     nodes {
       isResolved
     }
   }
   statusCheckRollup {
     state
-    contexts(first: 50) {
+    contexts(first: 20) {
       nodes {
         __typename
         ... on CheckRun {
@@ -75,30 +72,72 @@ fragment PRDetails on PullRequest {
 }
 `;
 
+export const SEARCH_PR_FRAGMENT = `
+fragment SearchPRDetails on PullRequest {
+  id
+  number
+  title
+  url
+  isDraft
+  mergeable
+  updatedAt
+  createdAt
+  repository {
+    nameWithOwner
+    isArchived
+    isFork
+  }
+  author {
+    login
+    avatarUrl
+  }
+  reviewRequests(first: 10) {
+    nodes {
+      requestedReviewer {
+        __typename
+        ... on User {
+          login
+        }
+      }
+    }
+  }
+  latestReviews(last: 10) {
+    nodes {
+      author {
+        login
+      }
+      state
+      createdAt
+    }
+  }
+}
+`;
+
 export const FETCH_ALL_PRS_QUERY = `
-${PR_FRAGMENT}
+${AUTHORED_PR_FRAGMENT}
+${SEARCH_PR_FRAGMENT}
 
 query PullRequestsData {
   viewer {
     login
     avatarUrl
-    pullRequests(first: 50, states: [OPEN], orderBy: {field: UPDATED_AT, direction: DESC}) {
+    pullRequests(first: 30, states: [OPEN], orderBy: {field: UPDATED_AT, direction: DESC}) {
       nodes {
-        ...PRDetails
+        ...AuthoredPRDetails
       }
     }
   }
   reviewRequested: search(query: "type:pr state:open review-requested:@me", type: ISSUE, first: 30) {
     nodes {
       ... on PullRequest {
-        ...PRDetails
+        ...SearchPRDetails
       }
     }
   }
   reviewedByMe: search(query: "type:pr state:open reviewed-by:@me -author:@me", type: ISSUE, first: 30) {
     nodes {
       ... on PullRequest {
-        ...PRDetails
+        ...SearchPRDetails
       }
     }
   }

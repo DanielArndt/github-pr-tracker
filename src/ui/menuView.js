@@ -147,6 +147,7 @@ export class MenuView {
      * @param {string} errorText
      */
     showError(errorText) {
+        this._hasError = true;
         this._statusItem.label.text = `⚠️ ${errorText}`;
         this._statusItem.actor.show();
     }
@@ -158,9 +159,10 @@ export class MenuView {
     setLoading(isLoading) {
         this._refreshBtn.reactive = !isLoading;
         if (isLoading) {
+            this._hasError = false;
             this._statusItem.label.text = 'Fetching pull requests...';
             this._statusItem.actor.show();
-        } else {
+        } else if (!this._hasError) {
             this._statusItem.actor.hide();
         }
     }
