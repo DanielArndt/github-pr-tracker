@@ -298,13 +298,17 @@ export class PRItem {
         );
 
         if (directReviewRequested) {
-            this.reasons.push('Review Requested');
+            if (previouslyReviewed) {
+                this.reasons.push('Awaiting Re-review');
+            } else {
+                this.reasons.push('Review Requested');
+            }
             return CATEGORIES.NEEDS_MY_REVIEW;
         }
 
+        // If already reviewed and direct review was not re-requested, do not display
         if (previouslyReviewed) {
-            this.reasons.push('Awaiting Re-review');
-            return CATEGORIES.NEEDS_MY_REVIEW;
+            return null;
         }
 
         const includeTeamReviews = options.includeTeamReviews ?? false;

@@ -134,13 +134,6 @@ query PullRequestsData {
       }
     }
   }
-  reviewedByMe: search(query: "type:pr state:open reviewed-by:@me -author:@me", type: ISSUE, first: 30) {
-    nodes {
-      ... on PullRequest {
-        ...SearchPRDetails
-      }
-    }
-  }
 }
 `;
 

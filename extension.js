@@ -155,11 +155,6 @@ export default class GitHubPRExtension extends Extension {
                 if (node && node.id) rawNodesMap.set(node.id, node);
             }
 
-            const reviewedNodes = data.reviewedByMe?.nodes || [];
-            for (const node of reviewedNodes) {
-                if (node && node.id) rawNodesMap.set(node.id, node);
-            }
-
             this._rawNodes = Array.from(rawNodesMap.values());
             const includeTeamReviews = this._settings.get_boolean('include-team-reviews');
             this._rawPRItems = this._rawNodes.map(

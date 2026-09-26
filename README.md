@@ -13,8 +13,8 @@ A GNOME Shell extension (compatible with GNOME Shell 45–50+) that tracks pull 
     - Merge conflicts with the target branch
     - Unresolved review comments/threads
   - 💬 **Needs My Review**: Pull requests from others where:
-    - Review was requested directly from you
-    - You previously reviewed and the PR is awaiting follow-up / author re-request
+    - Review was requested directly from you (including author re-requests on previously reviewed PRs)
+    - Review was requested from your team (when team review is enabled in preferences and you have not already reviewed it)
   - ✓ **Ready to Merge**: Approved pull requests authored by you with passing required CI checks and no conflicts.
   - ⏳ **Waiting on Review**: Open, non-draft pull requests authored by you that are awaiting review from others.
   - 📝 **Draft PRs**: Your open draft pull requests.

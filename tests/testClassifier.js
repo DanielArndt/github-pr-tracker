@@ -202,7 +202,7 @@ function makePR(overrides = {}) {
     assertEqual(pr.reasons, ['Review Requested'], 'Reason is Review Requested');
 }
 
-// 11. Needs My Review: Previously reviewed by me
+// 11. Previously reviewed by me without re-request: Excluded
 {
     const pr = new PRItem(makePR({
         author: { login: 'bob' },
@@ -210,11 +210,26 @@ function makePR(overrides = {}) {
             nodes: [{ author: { login: 'alice' }, state: 'COMMENTED' }],
         },
     }), viewerLogin);
-    assertEqual(pr.category, CATEGORIES.NEEDS_MY_REVIEW, 'Previously reviewed categorized as NEEDS_MY_REVIEW');
+    assertEqual(pr.category, null, 'Previously reviewed PR without re-request is excluded');
+    assertEqual(pr.reasons, [], 'No reasons for excluded PR');
+}
+
+// 12. Needs My Review: Direct re-request on previously reviewed PR
+{
+    const pr = new PRItem(makePR({
+        author: { login: 'bob' },
+        reviewRequests: {
+            nodes: [{ requestedReviewer: { login: 'alice' } }],
+        },
+        latestReviews: {
+            nodes: [{ author: { login: 'alice' }, state: 'COMMENTED' }],
+        },
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.NEEDS_MY_REVIEW, 'Direct re-request categorized as NEEDS_MY_REVIEW');
     assertEqual(pr.reasons, ['Awaiting Re-review'], 'Reason is Awaiting Re-review');
 }
 
-// 12. Needs My Review: Team review request excluded by default
+// 13. Needs My Review: Team review request excluded by default
 {
     const pr = new PRItem(makePR({
         author: { login: 'bob' },
@@ -225,7 +240,7 @@ function makePR(overrides = {}) {
     assertEqual(pr.category, null, 'Team review excluded when includeTeamReviews is false');
 }
 
-// 13. Needs My Review: Team review request included when enabled
+// 14. Needs My Review: Team review request included when enabled
 {
     const pr = new PRItem(makePR({
         author: { login: 'bob' },
@@ -235,6 +250,21 @@ function makePR(overrides = {}) {
     }), viewerLogin, { includeTeamReviews: true });
     assertEqual(pr.category, CATEGORIES.NEEDS_MY_REVIEW, 'Team review included when includeTeamReviews is true');
     assertEqual(pr.reasons, ['Team Review'], 'Reason is Team Review');
+}
+
+// 15. Team review request ignored if already reviewed by viewer
+{
+    const pr = new PRItem(makePR({
+        author: { login: 'bob' },
+        reviewRequests: {
+            nodes: [{ requestedReviewer: { __typename: 'Team' } }],
+        },
+        latestReviews: {
+            nodes: [{ author: { login: 'alice' }, state: 'APPROVED' }],
+        },
+    }), viewerLogin, { includeTeamReviews: true });
+    assertEqual(pr.category, null, 'Team review excluded if already reviewed by viewer');
+    assertEqual(pr.reasons, [], 'No reasons for excluded PR');
 }
 
 console.log('\n--- Testing RepoFilter ---');
