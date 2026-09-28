@@ -6,6 +6,7 @@ import Clutter from 'gi://Clutter';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import { CATEGORIES, CATEGORY_METADATA } from '../models/prItem.js';
 import { CollapsibleSection } from './collapsibleSection.js';
+import { formatRelativeTime } from '../utils/time.js';
 
 export class MenuView {
     /**
@@ -76,12 +77,14 @@ export class MenuView {
             this._menu.disconnectObject(section);
         }
 
-        // Re-expand default-expanded sections whenever the dropdown menu opens
+        // Re-expand default-expanded sections and refresh the "Updated …"
+        // label whenever the dropdown menu opens
         this._menuOpenStateId = this._menu.connect('open-state-changed', (menu, open) => {
             if (open) {
                 for (const section of this._sections.values()) {
                     section.onMenuOpened();
                 }
+                this._updateTimeLabel();
             }
         });
 
@@ -210,24 +213,20 @@ export class MenuView {
             totalPRs += items.length;
             section.setPRs(items);
         }
+    }
 
-        this._lastUpdated = new Date();
+    /**
+     * Records when PR data was last fetched from GitHub.
+     * @param {Date|null} date null when no data is available
+     */
+    setLastUpdated(date) {
+        this._lastUpdated = date;
         this._updateTimeLabel();
     }
 
     _updateTimeLabel() {
-        if (!this._lastUpdated) {
-            this._timeLabel.text = 'Never updated';
-            return;
-        }
-        const now = new Date();
-        const seconds = Math.floor((now.getTime() - this._lastUpdated.getTime()) / 1000);
-        if (seconds < 60) {
-            this._timeLabel.text = 'Updated just now';
-        } else {
-            const minutes = Math.floor(seconds / 60);
-            this._timeLabel.text = `Updated ${minutes}m ago`;
-        }
+        const relative = formatRelativeTime(this._lastUpdated);
+        this._timeLabel.text = relative ? `Updated ${relative}` : 'Never updated';
     }
 
     destroy() {

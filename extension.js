@@ -72,6 +72,7 @@ export default class GitHubPRExtension extends Extension {
         this._rawNodes = [];
         this._rawPRItems = [];
         this._indicator.updateCounts(new Map());
+        this._indicator.menuView.setLastUpdated(null);
     }
 
     _onFilterSettingsChanged() {
@@ -189,6 +190,7 @@ export default class GitHubPRExtension extends Extension {
             );
 
             this._applyFilterAndDisplay(this._rawPRItems);
+            this._indicator.menuView.setLastUpdated(new Date());
         } catch (err) {
             // A superseded or cancelled request leaves the UI to the newer one.
             if (!isCurrent() || err instanceof RequestCancelledError) return;
