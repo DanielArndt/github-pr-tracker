@@ -7,7 +7,7 @@ import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import { Indicator } from './src/ui/indicator.js';
 import { GithubClient } from './src/api/githubClient.js';
 import { loadToken } from './src/api/keyring.js';
-import { syncClientToken } from './src/api/tokenSync.js';
+import { syncClientToken, TOKEN_CHANGED_KEY } from './src/api/tokenSync.js';
 import { RepoFilter } from './src/ui/repoFilter.js';
 import { PRItem, CATEGORIES } from './src/models/prItem.js';
 import {
@@ -56,6 +56,7 @@ export default class GitHubPRExtension extends Extension {
             this._settings.connect('changed::ignore-archived', () => this._onFilterSettingsChanged()),
             this._settings.connect('changed::ignore-forks', () => this._onFilterSettingsChanged()),
             this._settings.connect('changed::include-team-reviews', () => this._onFilterSettingsChanged()),
+            this._settings.connect(`changed::${TOKEN_CHANGED_KEY}`, () => this.refreshData(true)),
         ];
 
         // Load token from keyring and start

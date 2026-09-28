@@ -1,7 +1,11 @@
 // SPDX-FileCopyrightText: 2026 Daniel Arndt <dan@arndt.ca>
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { syncClientToken } from '../src/api/tokenSync.js';
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+GLib.setenv('GSETTINGS_BACKEND', 'memory', true);
+
+import { syncClientToken, notifyTokenChanged, TOKEN_CHANGED_KEY } from '../src/api/tokenSync.js';
 
 let passed = 0;
 let failed = 0;
@@ -72,6 +76,34 @@ console.log('--- Testing Token Sync ---');
     }
     assert(threw, 'Propagates keyring errors');
     assert(client.token === 'ghp_old', 'Leaves token untouched on keyring error');
+}
+
+// notifyTokenChanged bumps the GSettings marker that the extension listens to
+{
+    const schemaSource = Gio.SettingsSchemaSource.new_from_directory(
+        './schemas',
+        Gio.SettingsSchemaSource.get_default(),
+        false
+    );
+    const schema = schemaSource.lookup('org.gnome.shell.extensions.github-pr-tracker', false);
+    const settings = new Gio.Settings({ settings_schema: schema });
+
+    assert(settings.get_int64(TOKEN_CHANGED_KEY) === 0, 'token-changed defaults to 0');
+
+    let changedCount = 0;
+    const id = settings.connect(`changed::${TOKEN_CHANGED_KEY}`, () => changedCount++);
+
+    notifyTokenChanged(settings);
+    const first = settings.get_int64(TOKEN_CHANGED_KEY);
+    assert(first > 0, 'notifyTokenChanged writes a timestamp');
+
+    GLib.usleep(1000);
+    notifyTokenChanged(settings);
+    assert(settings.get_int64(TOKEN_CHANGED_KEY) > first, 'Repeated notifications change the value');
+    assert(changedCount === 2, 'Each notification emits a changed signal');
+
+    settings.disconnect(id);
+    settings.reset(TOKEN_CHANGED_KEY);
 }
 
 console.log(`\nToken Sync Tests finished: ${passed} passed, ${failed} failed.`);

@@ -49,5 +49,11 @@
       <summary>Dismissed pull requests</summary>
       <description>JSON-encoded dictionary mapping PR identifiers to the ISO timestamp when dismissed.</description>
     </key>
+
+    <key name="token-changed" type="x">
+      <default>0</default>
+      <summary>Access token change marker</summary>
+      <description>Updated by Preferences whenever the access token is saved or cleared, so the running extension refreshes immediately. Contains a timestamp only, never the token itself.</description>
+    </key>
   </schema>
 </schemalist>

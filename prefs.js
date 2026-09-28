@@ -6,6 +6,7 @@ import Gtk from 'gi://Gtk?version=4.0';
 import Gio from 'gi://Gio';
 import { ExtensionPreferences } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 import { storeToken, loadToken, deleteToken } from './src/api/keyring.js';
+import { notifyTokenChanged } from './src/api/tokenSync.js';
 import { GithubClient } from './src/api/githubClient.js';
 
 export default class GitHubPRExtensionPreferences extends ExtensionPreferences {
@@ -103,6 +104,7 @@ export default class GitHubPRExtensionPreferences extends ExtensionPreferences {
             saveBtn.set_sensitive(false);
             try {
                 await storeToken(token);
+                notifyTokenChanged(settings);
                 await verifyCurrentToken(token);
             } catch (err) {
                 statusRow.set_subtitle(`Failed to store token: ${err.message}`);
@@ -115,6 +117,7 @@ export default class GitHubPRExtensionPreferences extends ExtensionPreferences {
             clearBtn.set_sensitive(false);
             try {
                 await deleteToken();
+                notifyTokenChanged(settings);
                 tokenRow.set_text('');
                 statusRow.set_subtitle('Token removed from keyring.');
             } catch (err) {
