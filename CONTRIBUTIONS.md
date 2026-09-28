@@ -44,8 +44,8 @@ This project strictly follows the **[Conventional Commits](https://www.conventio
    - `(classifier)`: PR categorization and status logic (`src/models/prItem.js`)
    - `(graphql)`: GitHub GraphQL client and queries (`src/api/githubClient.js`)
    - `(menu)`: Popup menu and UI cards (`src/ui/menuView.js`)
-   - `(indicator)`: Top panel indicator and badges (`src/ui/panelIndicator.js`)
-   - `(auth)`: Keyring and authentication handling (`src/auth/secretStorage.js`)
+   - `(indicator)`: Top panel indicator and badges (`src/ui/indicator.js`)
+   - `(auth)`: Keyring and authentication handling (`src/api/keyring.js`)
 6. **Breaking Changes**: Mark breaking changes by appending a `!` before the colon (e.g. `feat(api)!: migrate to GraphQL v5 API`) or including `BREAKING CHANGE:` in the footer.
 
 ### Examples

@@ -59,4 +59,4 @@ This document specifies mandatory rules and operational guidelines for all AI co
   - `Soup 3.0` for networking (GraphQL API calls).
   - `Secret 1` for credential storage (keyring).
   - `Gio`, `GLib`, `St`, `Clutter` for GNOME Shell UI and system interaction.
-- **Security**: Never store tokens or sensitive credentials in plain text or GSettings. Always use the secret storage module (`src/auth/secretStorage.js`).
+- **Security**: Never store tokens or sensitive credentials in plain text or GSettings. Always use the secret storage module (`src/api/keyring.js`).
