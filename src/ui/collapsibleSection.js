@@ -20,7 +20,10 @@ class CollapsibleSection extends PopupMenu.PopupSubMenuMenuItem {
         this._onDismiss = callbacks.onDismiss || null;
         this._onUndo = callbacks.onUndo || null;
         this._isDismissedSection = (categoryId === CATEGORIES.DISMISSED);
-        this._userToggled = false;
+        // Open state chosen by the user (true/false), or null to follow the
+        // default. GNOME Shell closes submenus whenever the dropdown closes,
+        // so this is what gets restored when it reopens.
+        this._userOpen = null;
 
         if (this.icon && iconName) {
             this.icon.icon_name = iconName;
@@ -43,6 +46,8 @@ class CollapsibleSection extends PopupMenu.PopupSubMenuMenuItem {
         this._items = [];
     }
 
+    // Unlike the parent class, this does not call _setOpenedSubMenu(), so
+    // opening one section does not collapse the others.
     _subMenuOpenStateChanged(menu, open) {
         if (open) {
             this.add_style_pseudo_class('open');
@@ -55,9 +60,10 @@ class CollapsibleSection extends PopupMenu.PopupSubMenuMenuItem {
         }
     }
 
-    activate(event) {
-        this._userToggled = true;
-        super.activate(event);
+    // Called by the parent class for both clicks and Left/Right arrow keys
+    _setOpenState(open) {
+        this._userOpen = open;
+        this.setSubmenuShown(open, false);
     }
 
     setSubmenuShown(open, animate = false) {
@@ -67,13 +73,19 @@ class CollapsibleSection extends PopupMenu.PopupSubMenuMenuItem {
             this.menu.close(animate);
     }
 
-    onMenuOpened() {
-        const shouldBeOpen = this._userToggled
-            ? this.menu.isOpen
-            : (this._defaultExpanded && this._items.length > 0);
-        if (shouldBeOpen && !this.menu.isOpen) {
-            this.setSubmenuShown(true, false);
+    _shouldBeOpen() {
+        return this._userOpen ?? (this._defaultExpanded && this._items.length > 0);
+    }
+
+    _syncOpenState() {
+        const shouldBeOpen = this._shouldBeOpen();
+        if (shouldBeOpen !== this.menu.isOpen) {
+            this.setSubmenuShown(shouldBeOpen, false);
         }
+    }
+
+    onMenuOpened() {
+        this._syncOpenState();
     }
 
     get categoryId() {
@@ -108,35 +120,23 @@ class CollapsibleSection extends PopupMenu.PopupSubMenuMenuItem {
         this._items = prItems;
         this.setCount(prItems.length);
 
-        const shouldBeOpen = this._userToggled
-            ? this.menu.isOpen
-            : (this._defaultExpanded && prItems.length > 0);
-
         if (prItems.length === 0) {
             const emptyItem = new PopupMenu.PopupMenuItem('No pull requests', {
                 reactive: false,
                 style_class: 'pr-empty-item',
             });
             this.menu.addMenuItem(emptyItem);
-            if (this.menu.isOpen && !this._userToggled) {
-                this.setSubmenuShown(false, false);
+        } else {
+            for (const item of prItems) {
+                const row = new PRRow(item, {
+                    onDismiss: this._onDismiss,
+                    onUndo: this._onUndo,
+                    isDismissed: this._isDismissedSection,
+                });
+                this.menu.addMenuItem(row);
             }
-            return;
         }
 
-        for (const item of prItems) {
-            const row = new PRRow(item, {
-                onDismiss: this._onDismiss,
-                onUndo: this._onUndo,
-                isDismissed: this._isDismissedSection,
-            });
-            this.menu.addMenuItem(row);
-        }
-
-        if (shouldBeOpen && !this.menu.isOpen) {
-            this.setSubmenuShown(true, false);
-        } else if (!shouldBeOpen && this.menu.isOpen) {
-            this.setSubmenuShown(false, false);
-        }
+        this._syncOpenState();
     }
 });
