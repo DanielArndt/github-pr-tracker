@@ -44,7 +44,29 @@ app.connect('activate', () => {
         const settings = new Gio.Settings({ settings_schema: schema });
         prefs.getSettings = () => settings;
 
+        // In-memory keyring so the test never reads or writes real secrets
+        const keyringCalls = [];
+        prefs.getKeyring = () => ({
+            loadToken: () => {
+                keyringCalls.push('load');
+                return Promise.resolve(null);
+            },
+            storeToken: () => {
+                keyringCalls.push('store');
+                return Promise.resolve(true);
+            },
+            deleteToken: () => {
+                keyringCalls.push('delete');
+                return Promise.resolve(true);
+            },
+        });
+
         prefs.fillPreferencesWindow(window);
+
+        if (keyringCalls.join() !== 'load') {
+            throw new Error(`Expected a single keyring load, got [${keyringCalls.join(', ')}]`);
+        }
+
         console.log('✓ Successfully initialized preferences window and all widget bindings!');
         app.quit();
     } catch (e) {

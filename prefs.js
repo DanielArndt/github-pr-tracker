@@ -5,13 +5,23 @@ import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk?version=4.0';
 import Gio from 'gi://Gio';
 import { ExtensionPreferences } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
-import { storeToken, loadToken, deleteToken } from './src/api/keyring.js';
+import * as keyring from './src/api/keyring.js';
 import { notifyTokenChanged } from './src/api/tokenSync.js';
 import { GithubClient, RequestCancelledError } from './src/api/githubClient.js';
 
 export default class GitHubPRExtensionPreferences extends ExtensionPreferences {
+    /**
+     * Token storage used by the window; tests replace this to avoid touching
+     * the real keyring.
+     * @returns {{storeToken: Function, loadToken: Function, deleteToken: Function}}
+     */
+    getKeyring() {
+        return keyring;
+    }
+
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
+        const { storeToken, loadToken, deleteToken } = this.getKeyring();
         const client = new GithubClient();
 
         const page = new Adw.PreferencesPage({
