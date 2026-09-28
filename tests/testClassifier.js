@@ -224,6 +224,17 @@ function withChecks({ rollupState, contexts, required = null, mergeStateStatus, 
     assertEqual(pr.category, CATEGORIES.READY_TO_MERGE, 'Approved PR without any checks is READY_TO_MERGE');
 }
 
+// 4g. Null check nodes (partial GraphQL responses) are ignored
+{
+    const pr = new PRItem(withChecks({
+        rollupState: 'FAILURE',
+        required: ['unit-tests'],
+        mergeStateStatus: 'BLOCKED',
+        contexts: [null, checkRun('unit-tests', 'FAILURE')],
+    }), viewerLogin);
+    assert(pr.reasons.includes('CI Failed'), 'Null check nodes do not break classification');
+}
+
 // 5. Action Required: Merge Conflicts
 {
     const pr = new PRItem(makePR({ mergeable: 'CONFLICTING' }), viewerLogin);

@@ -55,57 +55,86 @@ export const CATEGORY_METADATA = {
     },
 };
 
+const FAILING_CHECK_RUN_CONCLUSIONS = ['FAILURE', 'TIMED_OUT', 'CANCELLED', 'ACTION_REQUIRED'];
+const PASSING_CHECK_RUN_CONCLUSIONS = ['SUCCESS', 'NEUTRAL'];
+const FAILING_STATUS_STATES = ['FAILURE', 'ERROR'];
+const FAILING_ROLLUP_STATES = ['FAILURE', 'ERROR'];
+
+/**
+ * Name of a check as used in branch protection's required contexts.
+ * @param {Object} ctx CheckRun or StatusContext node
+ * @returns {string}
+ */
+function contextName(ctx) {
+    return ctx.name || ctx.context;
+}
+
+/**
+ * @param {Object} ctx CheckRun or StatusContext node
+ * @returns {boolean} whether the check finished unsuccessfully
+ */
+function isContextFailing(ctx) {
+    switch (ctx.__typename) {
+    case 'CheckRun':
+        return FAILING_CHECK_RUN_CONCLUSIONS.includes(ctx.conclusion);
+    case 'StatusContext':
+        return FAILING_STATUS_STATES.includes(ctx.state);
+    default:
+        return false;
+    }
+}
+
+/**
+ * @param {Object} ctx CheckRun or StatusContext node
+ * @returns {boolean} whether the check finished successfully
+ */
+function isContextPassing(ctx) {
+    switch (ctx.__typename) {
+    case 'CheckRun':
+        return PASSING_CHECK_RUN_CONCLUSIONS.includes(ctx.conclusion);
+    case 'StatusContext':
+        return ctx.state === 'SUCCESS';
+    default:
+        return true;
+    }
+}
+
+/**
+ * Extracts the status check data used by the classifier.
+ * @param {Object} rawNode
+ * @returns {{rollup: Object|null, contexts: Array<Object>, required: Array<string>}}
+ */
+function getCheckData(rawNode) {
+    const rollup = rawNode?.statusCheckRollup || null;
+    return {
+        rollup,
+        // Nodes can be null in partial GraphQL responses
+        contexts: (rollup?.contexts?.nodes || []).filter(Boolean),
+        required: rawNode?.baseRef?.branchProtectionRule?.requiredStatusCheckContexts || [],
+    };
+}
+
 /**
  * Checks if a PR has failing required checks.
  * @param {Object} rawNode
  * @returns {boolean}
  */
 function hasFailingRequiredChecks(rawNode) {
-    if (!rawNode) return false;
-
-    const statusRollup = rawNode.statusCheckRollup;
-    if (!statusRollup) {
+    const { rollup, contexts, required } = getCheckData(rawNode);
+    if (!rollup) {
         return false;
     }
 
-    const contexts = statusRollup.contexts?.nodes || [];
-    const requiredContexts = rawNode.baseRef?.branchProtectionRule?.requiredStatusCheckContexts || [];
-
-    // 1. If branch protection specifies required check contexts
-    if (requiredContexts.length > 0) {
-        for (const ctx of contexts) {
-            const name = ctx.name || ctx.context;
-            if (requiredContexts.includes(name)) {
-                if (ctx.__typename === 'CheckRun') {
-                    const badConclusions = ['FAILURE', 'TIMED_OUT', 'CANCELLED', 'ACTION_REQUIRED'];
-                    if (badConclusions.includes(ctx.conclusion)) {
-                        return true;
-                    }
-                }
-                if (ctx.__typename === 'StatusContext') {
-                    const badStates = ['FAILURE', 'ERROR'];
-                    if (badStates.includes(ctx.state)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
+    // 1. Branch protection lists the required checks
+    if (required.length > 0) {
+        return contexts.some(ctx => required.includes(contextName(ctx)) && isContextFailing(ctx));
     }
 
-    // 2. GitHub mergeStateStatus: BLOCKED indicates required status checks or reviews are blocking merge
-    if (rawNode.mergeStateStatus === 'BLOCKED' && (statusRollup.state === 'FAILURE' || statusRollup.state === 'ERROR')) {
-        for (const ctx of contexts) {
-            if (ctx.__typename === 'CheckRun' && ['FAILURE', 'TIMED_OUT', 'CANCELLED', 'ACTION_REQUIRED'].includes(ctx.conclusion)) {
-                return true;
-            }
-            if (ctx.__typename === 'StatusContext' && ['FAILURE', 'ERROR'].includes(ctx.state)) {
-                return true;
-            }
-        }
-    }
-
-    return false;
+    // 2. Without branch protection info, BLOCKED with a failing rollup means
+    //    required checks (or reviews) are blocking the merge
+    return rawNode.mergeStateStatus === 'BLOCKED' &&
+        FAILING_ROLLUP_STATES.includes(rollup.state) &&
+        contexts.some(isContextFailing);
 }
 
 /**
@@ -114,14 +143,8 @@ function hasFailingRequiredChecks(rawNode) {
  * @returns {boolean}
  */
 function areRequiredChecksPassing(rawNode) {
-    if (!rawNode) return true;
-
-    const statusRollup = rawNode.statusCheckRollup;
-    if (!statusRollup) {
-        return true;
-    }
-
-    if (statusRollup.state === 'SUCCESS') {
+    const { rollup, contexts, required } = getCheckData(rawNode);
+    if (!rollup || rollup.state === 'SUCCESS') {
         return true;
     }
 
@@ -129,31 +152,16 @@ function areRequiredChecksPassing(rawNode) {
         return true;
     }
 
-    const contexts = statusRollup.contexts?.nodes || [];
-    const requiredContexts = rawNode.baseRef?.branchProtectionRule?.requiredStatusCheckContexts || [];
-
-    if (requiredContexts.length > 0) {
-        for (const reqName of requiredContexts) {
-            const ctx = contexts.find(c => (c.name || c.context) === reqName);
-            if (!ctx) {
-                return false;
-            }
-            if (ctx.__typename === 'CheckRun' && ctx.conclusion !== 'SUCCESS' && ctx.conclusion !== 'NEUTRAL') {
-                return false;
-            }
-            if (ctx.__typename === 'StatusContext' && ctx.state !== 'SUCCESS') {
-                return false;
-            }
-        }
-        return true;
+    // Every required check must have reported and passed
+    if (required.length > 0) {
+        return required.every(name => {
+            const ctx = contexts.find(c => contextName(c) === name);
+            return !!ctx && isContextPassing(ctx);
+        });
     }
 
     // UNSTABLE means mergeable with non-passing commit status (i.e. only optional checks failed)
-    if (rawNode.mergeStateStatus === 'UNSTABLE') {
-        return true;
-    }
-
-    return false;
+    return rawNode.mergeStateStatus === 'UNSTABLE';
 }
 
 /**
