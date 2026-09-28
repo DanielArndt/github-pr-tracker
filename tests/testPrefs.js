@@ -6,9 +6,11 @@ import GLib from 'gi://GLib';
 import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk?version=4.0';
 
-// Register GNOME Shell Extensions gresource so resource:/// imports resolve
+// Register GNOME Shell Extensions gresource so resource:/// imports resolve.
+// The Makefile sets GNOME_SHELL_DATADIR for distributions that differ.
+const shellDataDir = GLib.getenv('GNOME_SHELL_DATADIR') || '/usr/share/gnome-shell';
 try {
-    const res = Gio.Resource.load('/usr/share/gnome-shell/org.gnome.Shell.Extensions.src.gresource');
+    const res = Gio.Resource.load(`${shellDataDir}/org.gnome.Shell.Extensions.src.gresource`);
     res._register();
 } catch (e) {
     console.log('Resource already registered or not found:', e);

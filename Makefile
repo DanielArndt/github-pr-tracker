@@ -4,6 +4,16 @@ BUILD_DIR = build
 SCHEMA_DIR = schemas
 INSTALL_DIR = $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
 
+# GNOME Shell's private library and data directories, needed by the
+# preferences test. Distributions differ (/usr/lib, /usr/lib64, multiarch);
+# override with e.g. `make test SHELL_LIBDIR=/opt/gnome/lib/gnome-shell`.
+SHELL_LIBDIR ?= $(firstword $(wildcard \
+	/usr/lib64/gnome-shell \
+	/usr/lib/gnome-shell \
+	/usr/lib/*-linux-gnu/gnome-shell) \
+	/usr/lib/gnome-shell)
+SHELL_DATADIR ?= /usr/share/gnome-shell
+
 .PHONY: all test compile-schemas pack install uninstall clean
 
 all: compile-schemas test pack
@@ -18,7 +28,11 @@ test: compile-schemas
 	gjs -m tests/testGithubClient.js
 	gjs -m tests/testTime.js
 	gjs -m tests/testPrNodes.js
-	GSETTINGS_BACKEND=memory GI_TYPELIB_PATH=/usr/lib/gnome-shell/girepository-1.0 LD_LIBRARY_PATH=/usr/lib/gnome-shell gjs -m tests/testPrefs.js
+	GSETTINGS_BACKEND=memory \
+		GI_TYPELIB_PATH=$(SHELL_LIBDIR)/girepository-1.0 \
+		LD_LIBRARY_PATH=$(SHELL_LIBDIR) \
+		GNOME_SHELL_DATADIR=$(SHELL_DATADIR) \
+		gjs -m tests/testPrefs.js
 
 pack: compile-schemas
 	@mkdir -p $(BUILD_DIR)
