@@ -10,6 +10,7 @@ import {
     isPRDismissed,
     recordDismissal,
     removeDismissal,
+    pruneMissingDismissals,
     categorizeAndPruneDismissed,
 } from '../src/models/dismissTracker.js';
 
@@ -150,6 +151,26 @@ const viewer = 'alice';
 
     const draftList = categorizedMap.get(CATEGORIES.DRAFT);
     assertEqual(draftList.length, 1, 'PR_3 placed in DRAFT');
+}
+
+// 5b. Pruning dismissals of PRs that are no longer fetched
+{
+    const dismissedMap = {
+        'PR_open': '2026-09-01T00:00:00.000Z',
+        'PR_merged': '2026-08-01T00:00:00.000Z',
+        'PR_closed': '2026-07-01T00:00:00.000Z',
+    };
+    const changed = pruneMissingDismissals(dismissedMap, new Set(['PR_open', 'PR_other']));
+    assert(changed, 'Reports change when entries are pruned');
+    assertEqual(Object.keys(dismissedMap), ['PR_open'], 'Keeps only dismissals of fetched PRs');
+
+    const unchanged = pruneMissingDismissals(dismissedMap, new Set(['PR_open']));
+    assert(!unchanged, 'Reports no change when all dismissed PRs were fetched');
+    assertEqual(Object.keys(dismissedMap), ['PR_open'], 'Leaves map intact when nothing is missing');
+
+    const empty = {};
+    assert(!pruneMissingDismissals(empty, new Set()), 'Empty map is left unchanged');
+    assert(!pruneMissingDismissals(null, new Set()), 'Null map is ignored');
 }
 
 // 6. GSettings schema key roundtrip test

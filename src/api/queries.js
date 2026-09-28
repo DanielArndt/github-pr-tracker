@@ -115,12 +115,18 @@ query PullRequestsData {
   viewer {
     login
     pullRequests(first: 30, states: [OPEN], orderBy: {field: UPDATED_AT, direction: DESC}) {
+      pageInfo {
+        hasNextPage
+      }
       nodes {
         ...AuthoredPRDetails
       }
     }
   }
   reviewRequested: search(query: "type:pr state:open review-requested:@me", type: ISSUE, first: 30) {
+    pageInfo {
+      hasNextPage
+    }
     nodes {
       ... on PullRequest {
         ...SearchPRDetails

@@ -10,9 +10,12 @@ import { loadToken } from './src/api/keyring.js';
 import { syncClientToken, TOKEN_CHANGED_KEY } from './src/api/tokenSync.js';
 import { RepoFilter } from './src/ui/repoFilter.js';
 import { PRItem } from './src/models/prItem.js';
+import { collectPRNodes } from './src/models/prNodes.js';
 import {
+    getPRKey,
     recordDismissal,
     removeDismissal,
+    pruneMissingDismissals,
     categorizeAndPruneDismissed,
 } from './src/models/dismissTracker.js';
 
@@ -166,24 +169,23 @@ export default class GitHubPRExtension extends Extension {
             }
             this._indicator.menuView.setUsername(this._viewerLogin);
 
-            // Collect all unique PR nodes
-            const rawNodesMap = new Map();
-
-            const authoredNodes = data.viewer?.pullRequests?.nodes || [];
-            for (const node of authoredNodes) {
-                if (node && node.id) rawNodesMap.set(node.id, node);
-            }
-
-            const requestedNodes = data.reviewRequested?.nodes || [];
-            for (const node of requestedNodes) {
-                if (node && node.id) rawNodesMap.set(node.id, node);
-            }
-
-            this._rawNodes = Array.from(rawNodesMap.values());
+            const { nodes, truncated } = collectPRNodes(data);
+            this._rawNodes = nodes;
             const includeTeamReviews = this._settings.get_boolean('include-team-reviews');
             this._rawPRItems = this._rawNodes.map(
                 node => new PRItem(node, this._viewerLogin, { includeTeamReviews })
             );
+
+            // Forget dismissals of PRs that are gone (merged, closed, review
+            // no longer requested), but only when nothing could be missing
+            // from this response
+            if (errors.length === 0 && !truncated) {
+                const dismissedMap = this._loadDismissedMap();
+                const fetchedKeys = new Set(this._rawPRItems.map(getPRKey));
+                if (pruneMissingDismissals(dismissedMap, fetchedKeys)) {
+                    this._saveDismissedMap(dismissedMap);
+                }
+            }
 
             this._applyFilterAndDisplay(this._rawPRItems);
             this._indicator.menuView.setLastUpdated(new Date());

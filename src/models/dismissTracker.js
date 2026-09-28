@@ -65,6 +65,31 @@ export function removeDismissal(prItem, dismissedMap) {
 }
 
 /**
+ * Removes dismissals for PRs that are no longer open or awaiting the user,
+ * e.g. merged or closed PRs, which would otherwise stay in GSettings forever.
+ *
+ * Only call this with the keys from a complete, error-free fetch: a PR
+ * missing because of truncation or a partial error must keep its dismissal.
+ * Repository filters must not be applied to `fetchedKeys` either, so that
+ * changing a filter does not forget dismissals.
+ *
+ * @param {Record<string, string>} dismissedMap
+ * @param {Set<string>} fetchedKeys PR keys (see getPRKey) of every fetched PR
+ * @returns {boolean} whether any entry was removed
+ */
+export function pruneMissingDismissals(dismissedMap, fetchedKeys) {
+    if (!dismissedMap || !fetchedKeys) return false;
+    let changed = false;
+    for (const key of Object.keys(dismissedMap)) {
+        if (!fetchedKeys.has(key)) {
+            delete dismissedMap[key];
+            changed = true;
+        }
+    }
+    return changed;
+}
+
+/**
  * Categorizes filtered PR items into active categories or DISMISSED,
  * and prunes dismissed items that received subsequent updates.
  *
