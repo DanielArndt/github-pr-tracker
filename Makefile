@@ -51,4 +51,4 @@ uninstall:
 	gnome-extensions uninstall $(UUID)
 
 clean:
-	rm -rf $(BUILD_DIR) /tmp/$(UUID).shell-extension.zip
+	rm -rf $(BUILD_DIR) $(SCHEMA_DIR)/gschemas.compiled
