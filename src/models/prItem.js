@@ -63,7 +63,7 @@ export const CATEGORY_METADATA = {
 function hasFailingRequiredChecks(rawNode) {
     if (!rawNode) return false;
 
-    const statusRollup = rawNode.statusCheckRollup || rawNode.commits?.nodes?.[0]?.commit?.statusCheckRollup;
+    const statusRollup = rawNode.statusCheckRollup;
     if (!statusRollup) {
         return false;
     }
@@ -93,29 +93,7 @@ function hasFailingRequiredChecks(rawNode) {
         return false;
     }
 
-    // 2. Explicit isRequired property (from unit test mocks or specific queries)
-    const hasExplicitIsRequired = contexts.some(c => c.isRequired !== undefined);
-    if (hasExplicitIsRequired) {
-        for (const ctx of contexts) {
-            if (ctx.isRequired) {
-                if (ctx.__typename === 'CheckRun') {
-                    const badConclusions = ['FAILURE', 'TIMED_OUT', 'CANCELLED', 'ACTION_REQUIRED'];
-                    if (badConclusions.includes(ctx.conclusion)) {
-                        return true;
-                    }
-                }
-                if (ctx.__typename === 'StatusContext') {
-                    const badStates = ['FAILURE', 'ERROR'];
-                    if (badStates.includes(ctx.state)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    // 3. GitHub mergeStateStatus: BLOCKED indicates required status checks or reviews are blocking merge
+    // 2. GitHub mergeStateStatus: BLOCKED indicates required status checks or reviews are blocking merge
     if (rawNode.mergeStateStatus === 'BLOCKED' && (statusRollup.state === 'FAILURE' || statusRollup.state === 'ERROR')) {
         for (const ctx of contexts) {
             if (ctx.__typename === 'CheckRun' && ['FAILURE', 'TIMED_OUT', 'CANCELLED', 'ACTION_REQUIRED'].includes(ctx.conclusion)) {
@@ -138,7 +116,7 @@ function hasFailingRequiredChecks(rawNode) {
 function areRequiredChecksPassing(rawNode) {
     if (!rawNode) return true;
 
-    const statusRollup = rawNode.statusCheckRollup || rawNode.commits?.nodes?.[0]?.commit?.statusCheckRollup;
+    const statusRollup = rawNode.statusCheckRollup;
     if (!statusRollup) {
         return true;
     }
@@ -165,21 +143,6 @@ function areRequiredChecksPassing(rawNode) {
             }
             if (ctx.__typename === 'StatusContext' && ctx.state !== 'SUCCESS') {
                 return false;
-            }
-        }
-        return true;
-    }
-
-    const hasExplicitIsRequired = contexts.some(c => c.isRequired !== undefined);
-    if (hasExplicitIsRequired) {
-        for (const ctx of contexts) {
-            if (ctx.isRequired) {
-                if (ctx.__typename === 'CheckRun' && ctx.conclusion !== 'SUCCESS' && ctx.conclusion !== 'NEUTRAL') {
-                    return false;
-                }
-                if (ctx.__typename === 'StatusContext' && ctx.state !== 'SUCCESS') {
-                    return false;
-                }
             }
         }
         return true;

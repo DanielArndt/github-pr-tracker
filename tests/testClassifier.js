@@ -56,15 +56,11 @@ function makePR(overrides = {}) {
         reviewRequests: { nodes: [] },
         latestReviews: { nodes: [] },
         reviewThreads: { nodes: [] },
-        commits: {
-            nodes: [{
-                commit: {
-                    statusCheckRollup: {
-                        state: 'SUCCESS',
-                        contexts: { nodes: [] },
-                    },
-                },
-            }],
+        mergeStateStatus: 'CLEAN',
+        baseRef: { name: 'main', branchProtectionRule: null },
+        statusCheckRollup: {
+            state: 'SUCCESS',
+            contexts: { nodes: [] },
         },
         ...overrides,
     };
@@ -84,57 +80,148 @@ function makePR(overrides = {}) {
     assert(pr.reasons.includes('Changes Requested'), 'Reason includes Changes Requested');
 }
 
-// 3. Action Required: Failing required CI check
-{
-    const pr = new PRItem(makePR({
-        commits: {
-            nodes: [{
-                commit: {
-                    statusCheckRollup: {
-                        state: 'FAILURE',
-                        contexts: {
-                            nodes: [
-                                {
-                                    __typename: 'CheckRun',
-                                    name: 'unit-tests',
-                                    conclusion: 'FAILURE',
-                                    isRequired: true,
-                                },
-                            ],
-                        },
-                    },
-                },
-            }],
+// Helpers for CI check fixtures shaped like the GraphQL query results
+function checkRun(name, conclusion, status = 'COMPLETED') {
+    return { __typename: 'CheckRun', name, conclusion, status };
+}
+
+function statusContext(context, state) {
+    return { __typename: 'StatusContext', context, state };
+}
+
+function withChecks({ rollupState, contexts, required = null, mergeStateStatus, ...rest }) {
+    return makePR({
+        statusCheckRollup: { state: rollupState, contexts: { nodes: contexts } },
+        baseRef: {
+            name: 'main',
+            branchProtectionRule: required ? { requiredStatusCheckContexts: required } : null,
         },
+        mergeStateStatus,
+        ...rest,
+    });
+}
+
+// 3. Action Required: Failing required CI check (branch protection lists it)
+{
+    const pr = new PRItem(withChecks({
+        rollupState: 'FAILURE',
+        required: ['unit-tests'],
+        mergeStateStatus: 'BLOCKED',
+        contexts: [checkRun('unit-tests', 'FAILURE')],
     }), viewerLogin);
     assertEqual(pr.category, CATEGORIES.ACTION_REQUIRED, 'Failing required check categorized as ACTION_REQUIRED');
     assert(pr.reasons.includes('CI Failed'), 'Reason includes CI Failed');
 }
 
+// 3b. Failing required legacy status context
+{
+    const pr = new PRItem(withChecks({
+        rollupState: 'ERROR',
+        required: ['ci/jenkins'],
+        mergeStateStatus: 'BLOCKED',
+        contexts: [statusContext('ci/jenkins', 'ERROR')],
+    }), viewerLogin);
+    assert(pr.reasons.includes('CI Failed'), 'Erroring required status context triggers CI Failed');
+}
+
+// 3c. Required check timed out or was cancelled
+{
+    for (const conclusion of ['TIMED_OUT', 'CANCELLED', 'ACTION_REQUIRED']) {
+        const pr = new PRItem(withChecks({
+            rollupState: 'FAILURE',
+            required: ['unit-tests'],
+            mergeStateStatus: 'BLOCKED',
+            contexts: [checkRun('unit-tests', conclusion)],
+        }), viewerLogin);
+        assert(pr.reasons.includes('CI Failed'), `Required check with ${conclusion} triggers CI Failed`);
+    }
+}
+
+// 3d. No branch protection info (e.g. not visible to viewer): BLOCKED + failing rollup
+{
+    const pr = new PRItem(withChecks({
+        rollupState: 'FAILURE',
+        mergeStateStatus: 'BLOCKED',
+        contexts: [checkRun('unit-tests', 'FAILURE')],
+    }), viewerLogin);
+    assert(pr.reasons.includes('CI Failed'), 'BLOCKED with failing check triggers CI Failed without protection info');
+}
+
 // 4. Failing OPTIONAL CI check should NOT trigger CI Failed
 {
-    const pr = new PRItem(makePR({
-        commits: {
-            nodes: [{
-                commit: {
-                    statusCheckRollup: {
-                        state: 'FAILURE',
-                        contexts: {
-                            nodes: [
-                                {
-                                    __typename: 'CheckRun',
-                                    name: 'optional-linter',
-                                    conclusion: 'FAILURE',
-                                    isRequired: false,
-                                },
-                            ],
-                        },
-                    },
-                },
-            }],
-        },
+    const pr = new PRItem(withChecks({
+        rollupState: 'FAILURE',
+        required: ['unit-tests'],
+        mergeStateStatus: 'UNSTABLE',
+        contexts: [
+            checkRun('unit-tests', 'SUCCESS'),
+            checkRun('optional-linter', 'FAILURE'),
+        ],
     }), viewerLogin);
     assert(!pr.reasons.includes('CI Failed'), 'Optional failing check does not trigger CI Failed');
+}
+
+// 4b. Optional failure without protection info: UNSTABLE means only optional checks failed
+{
+    const pr = new PRItem(withChecks({
+        rollupState: 'FAILURE',
+        mergeStateStatus: 'UNSTABLE',
+        reviewDecision: 'APPROVED',
+        contexts: [checkRun('optional-linter', 'FAILURE')],
+    }), viewerLogin);
+    assert(!pr.reasons.includes('CI Failed'), 'UNSTABLE optional failure does not trigger CI Failed');
+    assertEqual(pr.category, CATEGORIES.READY_TO_MERGE, 'Approved PR with only optional failures is READY_TO_MERGE');
+}
+
+// 4c. Approved but a required check is still running: not ready to merge
+{
+    const pr = new PRItem(withChecks({
+        rollupState: 'PENDING',
+        required: ['unit-tests'],
+        mergeStateStatus: 'BLOCKED',
+        reviewDecision: 'APPROVED',
+        contexts: [checkRun('unit-tests', null, 'IN_PROGRESS')],
+    }), viewerLogin);
+    assert(!pr.reasons.includes('CI Failed'), 'Running required check does not trigger CI Failed');
+    assertEqual(pr.category, CATEGORIES.WAITING_REVIEW, 'Approved PR with running required check is not READY_TO_MERGE');
+}
+
+// 4d. Approved but a required check has not reported yet
+{
+    const pr = new PRItem(withChecks({
+        rollupState: 'PENDING',
+        required: ['unit-tests', 'integration'],
+        mergeStateStatus: 'BLOCKED',
+        reviewDecision: 'APPROVED',
+        contexts: [checkRun('unit-tests', 'SUCCESS')],
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.WAITING_REVIEW, 'Missing required check keeps PR out of READY_TO_MERGE');
+}
+
+// 4e. Approved with all required checks passing (neutral counts as passing)
+{
+    const pr = new PRItem(withChecks({
+        rollupState: 'PENDING',
+        required: ['unit-tests', 'ci/jenkins', 'lint'],
+        mergeStateStatus: 'BLOCKED',
+        reviewDecision: 'APPROVED',
+        contexts: [
+            checkRun('unit-tests', 'SUCCESS'),
+            checkRun('lint', 'NEUTRAL'),
+            statusContext('ci/jenkins', 'SUCCESS'),
+            checkRun('optional-slow', null, 'IN_PROGRESS'),
+        ],
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.READY_TO_MERGE, 'Passing required checks allow READY_TO_MERGE');
+}
+
+// 4f. No checks configured at all
+{
+    const pr = new PRItem(makePR({
+        reviewDecision: 'APPROVED',
+        statusCheckRollup: null,
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.READY_TO_MERGE, 'Approved PR without any checks is READY_TO_MERGE');
 }
 
 // 5. Action Required: Merge Conflicts
