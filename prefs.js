@@ -7,7 +7,7 @@ import Gio from 'gi://Gio';
 import { ExtensionPreferences } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 import { storeToken, loadToken, deleteToken } from './src/api/keyring.js';
 import { notifyTokenChanged } from './src/api/tokenSync.js';
-import { GithubClient } from './src/api/githubClient.js';
+import { GithubClient, RequestCancelledError } from './src/api/githubClient.js';
 
 export default class GitHubPRExtensionPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
@@ -89,6 +89,8 @@ export default class GitHubPRExtensionPreferences extends ExtensionPreferences {
                     statusRow.set_subtitle('Connected, but could not determine user login.');
                 }
             } catch (err) {
+                // Superseded by a newer verification, which will set the status.
+                if (err instanceof RequestCancelledError) return;
                 statusRow.set_subtitle(`⚠️ Error: ${err.message}`);
             } finally {
                 testBtn.set_sensitive(true);

@@ -15,6 +15,7 @@ test: compile-schemas
 	gjs -m tests/testClassifier.js
 	GSETTINGS_BACKEND=memory gjs -m tests/testDismiss.js
 	GSETTINGS_BACKEND=memory gjs -m tests/testTokenSync.js
+	gjs -m tests/testGithubClient.js
 	GSETTINGS_BACKEND=memory GI_TYPELIB_PATH=/usr/lib/gnome-shell/girepository-1.0 LD_LIBRARY_PATH=/usr/lib/gnome-shell gjs -m tests/testPrefs.js
 
 pack: compile-schemas

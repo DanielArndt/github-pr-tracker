@@ -5,7 +5,7 @@ import GLib from 'gi://GLib';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import { Indicator } from './src/ui/indicator.js';
-import { GithubClient } from './src/api/githubClient.js';
+import { GithubClient, RequestCancelledError } from './src/api/githubClient.js';
 import { loadToken } from './src/api/keyring.js';
 import { syncClientToken, TOKEN_CHANGED_KEY } from './src/api/tokenSync.js';
 import { RepoFilter } from './src/ui/repoFilter.js';
@@ -120,20 +120,38 @@ export default class GitHubPRExtension extends Extension {
     }
 
     /**
+     * Invalidates any refresh currently in flight so its results are dropped.
+     * @returns {number} the new refresh generation
+     */
+    _bumpRefreshGeneration() {
+        this._refreshGeneration = (this._refreshGeneration ?? 0) + 1;
+        return this._refreshGeneration;
+    }
+
+    /**
      * Fetches fresh PR data from GitHub GraphQL API.
+     *
+     * Overlapping calls are allowed (timer, manual refresh, token change);
+     * only the most recent one updates the UI.
      * @param {boolean} [isManual]
      */
     async refreshData(isManual = false) {
+        const generation = this._bumpRefreshGeneration();
+        const isCurrent = () => generation === this._refreshGeneration;
+
         // Always re-read the keyring so tokens saved, replaced or cleared in
         // Preferences take effect without re-enabling the extension.
         let hasToken;
         try {
             hasToken = await syncClientToken(this._githubClient, loadToken);
         } catch (err) {
+            if (!isCurrent()) return;
             console.error('[GitHub PR Tracker] Keyring load error:', err);
             this._indicator.menuView.showError('Failed to access system keyring.');
             return;
         }
+
+        if (!isCurrent()) return;
 
         if (!hasToken) {
             this._clearData();
@@ -145,7 +163,7 @@ export default class GitHubPRExtension extends Extension {
 
         try {
             const data = await this._githubClient.fetchAllPRs();
-            if (!data) return;
+            if (!isCurrent() || !data) return;
 
             const viewerLogin = data.viewer?.login || '';
             if (viewerLogin && viewerLogin !== this._viewerLogin) {
@@ -175,10 +193,14 @@ export default class GitHubPRExtension extends Extension {
 
             this._applyFilterAndDisplay(this._rawPRItems);
         } catch (err) {
+            // A superseded or cancelled request leaves the UI to the newer one.
+            if (!isCurrent() || err instanceof RequestCancelledError) return;
             console.error('[GitHub PR Tracker] Error fetching data:', err);
             this._indicator.menuView.showError(err.message || 'Error fetching data.');
         } finally {
-            this._indicator.menuView.setLoading(false);
+            if (isCurrent()) {
+                this._indicator.menuView.setLoading(false);
+            }
         }
     }
 
@@ -244,6 +266,10 @@ export default class GitHubPRExtension extends Extension {
 
     disable() {
         this._stopTimer();
+
+        // Drop results of any refresh still in flight; destroying the client
+        // below rejects its pending request.
+        this._bumpRefreshGeneration();
 
         if (this._settingsChangedIds && this._settings) {
             for (const id of this._settingsChangedIds) {

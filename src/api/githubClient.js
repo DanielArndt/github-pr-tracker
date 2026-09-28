@@ -9,6 +9,17 @@ import { FETCH_ALL_PRS_QUERY, VERIFY_USER_QUERY } from './queries.js';
 const GITHUB_GRAPHQL_ENDPOINT = 'https://api.github.com/graphql';
 const USER_AGENT = 'GNOME-Shell-GitHub-PR-Tracker/1.0';
 
+/**
+ * Rejection reason for requests that were cancelled, either because a newer
+ * request superseded them or because the client was destroyed.
+ */
+export class RequestCancelledError extends Error {
+    constructor() {
+        super('Request cancelled');
+        this.name = 'RequestCancelledError';
+    }
+}
+
 export class GithubClient {
     /**
      * @param {string|null} token
@@ -75,14 +86,18 @@ export class GithubClient {
         const bytes = new GLib.Bytes(encoder.encode(payload));
         message.set_request_body_from_bytes('application/json', bytes);
 
+        // Only one request is in flight at a time; starting a new one cancels
+        // the previous. Keep a local reference so a late callback from the
+        // superseded request cannot clear the newer request's cancellable.
         this.cancelPending();
-        this._cancellable = new Gio.Cancellable();
+        const cancellable = new Gio.Cancellable();
+        this._cancellable = cancellable;
 
         return new Promise((resolve, reject) => {
             this._session.send_and_read_async(
                 message,
                 GLib.PRIORITY_DEFAULT,
-                this._cancellable,
+                cancellable,
                 (session, res) => {
                     try {
                         const responseBytes = session.send_and_read_finish(res);
@@ -123,12 +138,14 @@ export class GithubClient {
                         resolve(data.data);
                     } catch (e) {
                         if (e.matches && e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED)) {
-                            // Request cancelled quietly
+                            reject(new RequestCancelledError());
                             return;
                         }
                         reject(e);
                     } finally {
-                        this._cancellable = null;
+                        if (this._cancellable === cancellable) {
+                            this._cancellable = null;
+                        }
                     }
                 }
             );
