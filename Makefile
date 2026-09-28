@@ -14,9 +14,13 @@ SHELL_LIBDIR ?= $(firstword $(wildcard \
 	/usr/lib/gnome-shell)
 SHELL_DATADIR ?= /usr/share/gnome-shell
 
-.PHONY: all test compile-schemas pack install uninstall clean
+.PHONY: all lint test compile-schemas pack install uninstall clean
 
 all: compile-schemas test pack
+
+# Requires `npm ci` once to install ESLint into node_modules/
+lint:
+	npx --no-install eslint .
 
 compile-schemas:
 	glib-compile-schemas $(SCHEMA_DIR)

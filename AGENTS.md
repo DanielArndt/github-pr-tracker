@@ -44,9 +44,10 @@ This document specifies mandatory rules and operational guidelines for all AI co
 
 ## 2. Testing & Verification
 
-- Before committing or finishing any code modification, always verify existing and new tests pass by running:
+- Before committing or finishing any code modification, always verify existing and new tests pass and the code lints cleanly by running:
   ```bash
   make test
+  make lint   # after `npm ci` once
   ```
 - If introducing new logic or fixing bugs, ensure corresponding test coverage is added in `tests/`.
 

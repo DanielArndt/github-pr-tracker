@@ -4,7 +4,8 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Adw from 'gi://Adw';
-import Gtk from 'gi://Gtk?version=4.0';
+// Pin GTK 4 before prefs.js and libadwaita load it
+import 'gi://Gtk?version=4.0';
 
 // Register GNOME Shell Extensions gresource so resource:/// imports resolve.
 // The Makefile sets GNOME_SHELL_DATADIR for distributions that differ.

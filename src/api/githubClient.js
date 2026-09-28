@@ -57,7 +57,7 @@ export function parseGraphQLResponse(statusCode, reasonPhrase, responseText) {
     try {
         body = JSON.parse(responseText);
     } catch (parseErr) {
-        throw new Error(`Failed to parse GitHub response: ${parseErr.message}`);
+        throw new Error(`Failed to parse GitHub response: ${parseErr.message}`, { cause: parseErr });
     }
 
     const errors = Array.isArray(body?.errors) ? body.errors : [];
