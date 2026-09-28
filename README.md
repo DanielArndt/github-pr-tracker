@@ -65,9 +65,11 @@ gnome-extensions enable github-pr-tracker@dan.arndt.ca
 
 ## Setup & Configuration
 
-1. Generate a GitHub Personal Access Token:
-   - Go to [GitHub Settings → Developer Settings → Personal Access Tokens](https://github.com/settings/tokens).
-   - Ensure the token has the `repo` scope (for private repositories) or `public_repo` (for public-only repositories) and `read:org`.
+1. Generate a GitHub Personal Access Token (classic):
+   - Go to [GitHub Settings → Developer Settings → Personal Access Tokens → Tokens (classic)](https://github.com/settings/tokens).
+   - **Public repositories only:** leave all scopes unchecked. A token with no scopes can read public data, which is all the extension needs.
+   - **Private repositories:** select the `repo` scope. GitHub has no read-only equivalent for classic tokens, so this scope also grants write access. The extension only reads data and never modifies anything, but treat the token accordingly and set an expiration date.
+   - Fine-grained personal access tokens have not been tested and may not return all pull requests.
 2. Open extension preferences:
    ```bash
    gnome-extensions prefs github-pr-tracker@dan.arndt.ca
