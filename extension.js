@@ -188,7 +188,7 @@ export default class GitHubPRExtension extends Extension {
             }
 
             this._applyFilterAndDisplay(this._rawPRItems);
-            this._indicator.menuView.setLastUpdated(new Date());
+            this._indicator.menuView.setLastUpdated(new Date(), truncated);
 
             // Partial results: show what loaded, but flag what did not
             if (errors.length > 0) {

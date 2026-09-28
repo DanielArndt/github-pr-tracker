@@ -26,7 +26,7 @@ fragment AuthoredPRDetails on PullRequest {
       requiredStatusCheckContexts
     }
   }
-  reviewRequests(first: 10) {
+  reviewRequests(first: 100) {
     nodes {
       requestedReviewer {
         __typename
@@ -36,7 +36,7 @@ fragment AuthoredPRDetails on PullRequest {
       }
     }
   }
-  latestReviews(last: 10) {
+  latestReviews(last: 100) {
     nodes {
       author {
         login
@@ -44,14 +44,14 @@ fragment AuthoredPRDetails on PullRequest {
       state
     }
   }
-  reviewThreads(first: 20) {
+  reviewThreads(first: 100) {
     nodes {
       isResolved
     }
   }
   statusCheckRollup {
     state
-    contexts(first: 20) {
+    contexts(first: 100) {
       nodes {
         __typename
         ... on CheckRun {
@@ -86,7 +86,7 @@ fragment SearchPRDetails on PullRequest {
   author {
     login
   }
-  reviewRequests(first: 10) {
+  reviewRequests(first: 100) {
     nodes {
       requestedReviewer {
         __typename
@@ -96,7 +96,7 @@ fragment SearchPRDetails on PullRequest {
       }
     }
   }
-  latestReviews(last: 10) {
+  latestReviews(last: 100) {
     nodes {
       author {
         login
@@ -107,6 +107,11 @@ fragment SearchPRDetails on PullRequest {
 }
 `;
 
+// Nested connections use GitHub's maximum page size so that classification
+// never misses a required check, review thread or reviewer. The top-level
+// lists are capped at MAX_PRS_PER_LIST; pageInfo reports whether more exist.
+export const MAX_PRS_PER_LIST = 30;
+
 export const FETCH_ALL_PRS_QUERY = `
 ${AUTHORED_PR_FRAGMENT}
 ${SEARCH_PR_FRAGMENT}
@@ -114,7 +119,7 @@ ${SEARCH_PR_FRAGMENT}
 query PullRequestsData {
   viewer {
     login
-    pullRequests(first: 30, states: [OPEN], orderBy: {field: UPDATED_AT, direction: DESC}) {
+    pullRequests(first: ${MAX_PRS_PER_LIST}, states: [OPEN], orderBy: {field: UPDATED_AT, direction: DESC}) {
       pageInfo {
         hasNextPage
       }
@@ -123,7 +128,7 @@ query PullRequestsData {
       }
     }
   }
-  reviewRequested: search(query: "type:pr state:open review-requested:@me", type: ISSUE, first: 30) {
+  reviewRequested: search(query: "type:pr state:open review-requested:@me", type: ISSUE, first: ${MAX_PRS_PER_LIST}) {
     pageInfo {
       hasNextPage
     }

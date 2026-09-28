@@ -34,6 +34,11 @@ A GNOME Shell extension (compatible with GNOME Shell 45–50+) that tracks pull 
   - Background polling interval configurable between 1 and 60 minutes (default 5 minutes).
   - Manual "Refresh now" button in the menu footer.
 
+### Limits
+
+- Up to 30 of your most recently updated open pull requests, and up to 30 pull requests awaiting your review, are fetched. When GitHub has more, the menu footer shows "latest 30 per list".
+- Per pull request, up to 100 reviewers, reviews, review threads and status checks are considered.
+
 ---
 
 ## Installation

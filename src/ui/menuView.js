@@ -7,6 +7,7 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import { CATEGORIES, CATEGORY_METADATA } from '../models/prItem.js';
 import { CollapsibleSection } from './collapsibleSection.js';
 import { formatRelativeTime } from '../utils/time.js';
+import { MAX_PRS_PER_LIST } from '../api/queries.js';
 
 export class MenuView {
     /**
@@ -211,15 +212,22 @@ export class MenuView {
     /**
      * Records when PR data was last fetched from GitHub.
      * @param {Date|null} date null when no data is available
+     * @param {boolean} [truncated] whether GitHub had more PRs than were fetched
      */
-    setLastUpdated(date) {
+    setLastUpdated(date, truncated = false) {
         this._lastUpdated = date;
+        this._truncated = truncated;
         this._updateTimeLabel();
     }
 
     _updateTimeLabel() {
         const relative = formatRelativeTime(this._lastUpdated);
-        this._timeLabel.text = relative ? `Updated ${relative}` : 'Never updated';
+        if (!relative) {
+            this._timeLabel.text = 'Never updated';
+            return;
+        }
+        const suffix = this._truncated ? ` · latest ${MAX_PRS_PER_LIST} per list` : '';
+        this._timeLabel.text = `Updated ${relative}${suffix}`;
     }
 
     destroy() {
