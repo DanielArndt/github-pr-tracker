@@ -20,6 +20,56 @@ export class RequestCancelledError extends Error {
     }
 }
 
+/**
+ * @typedef {Object} GraphQLResult
+ * @property {Object} data response data; fields GitHub could not resolve are null
+ * @property {Array<{message: string}>} errors non-fatal errors (empty when none)
+ */
+
+/**
+ * Interprets a GitHub GraphQL HTTP response.
+ *
+ * GitHub may return partial `data` together with `errors`, for example when
+ * some results belong to an organization that enforces SAML SSO. Those are
+ * returned as non-fatal errors so the rest of the data can still be shown.
+ * Only a response without any `data` is treated as a failure.
+ *
+ * @param {number} statusCode
+ * @param {string|null} reasonPhrase
+ * @param {string} responseText
+ * @returns {GraphQLResult}
+ * @throws {Error} on HTTP errors, invalid JSON or responses without data
+ */
+export function parseGraphQLResponse(statusCode, reasonPhrase, responseText) {
+    if (statusCode === 401) {
+        throw new Error('Authentication failed (401). Please verify your GitHub Personal Access Token.');
+    }
+
+    if (statusCode === 403) {
+        throw new Error('GitHub API rate limit exceeded or access forbidden (403).');
+    }
+
+    if (statusCode < 200 || statusCode >= 300) {
+        throw new Error(`GitHub API error HTTP ${statusCode}: ${reasonPhrase || responseText}`);
+    }
+
+    let body;
+    try {
+        body = JSON.parse(responseText);
+    } catch (parseErr) {
+        throw new Error(`Failed to parse GitHub response: ${parseErr.message}`);
+    }
+
+    const errors = Array.isArray(body?.errors) ? body.errors : [];
+
+    if (!body?.data) {
+        const errorMsg = errors.map(e => e.message).join('; ') || 'Response contained no data';
+        throw new Error(`GraphQL error: ${errorMsg}`);
+    }
+
+    return { data: body.data, errors };
+}
+
 export class GithubClient {
     /**
      * @param {string|null} token
@@ -59,7 +109,7 @@ export class GithubClient {
      * @param {string} queryString
      * @param {Object} variables
      * @param {string|null} overrideToken
-     * @returns {Promise<any>}
+     * @returns {Promise<GraphQLResult>}
      */
     async executeQuery(queryString, variables = {}, overrideToken = null) {
         const token = overrideToken || this._token;
@@ -101,41 +151,14 @@ export class GithubClient {
                 (session, res) => {
                     try {
                         const responseBytes = session.send_and_read_finish(res);
-                        const statusCode = message.get_status();
-
                         const decoder = new TextDecoder('utf-8');
                         const responseText = responseBytes ? decoder.decode(responseBytes.get_data()) : '';
 
-                        if (statusCode === 401) {
-                            reject(new Error('Authentication failed (401). Please verify your GitHub Personal Access Token.'));
-                            return;
-                        }
-
-                        if (statusCode === 403) {
-                            reject(new Error('GitHub API rate limit exceeded or access forbidden (403).'));
-                            return;
-                        }
-
-                        if (statusCode < 200 || statusCode >= 300) {
-                            reject(new Error(`GitHub API error HTTP ${statusCode}: ${message.get_reason_phrase() || responseText}`));
-                            return;
-                        }
-
-                        let data;
-                        try {
-                            data = JSON.parse(responseText);
-                        } catch (parseErr) {
-                            reject(new Error(`Failed to parse GitHub response: ${parseErr.message}`));
-                            return;
-                        }
-
-                        if (data.errors && data.errors.length > 0) {
-                            const errorMsg = data.errors.map(e => e.message).join('; ');
-                            reject(new Error(`GraphQL error: ${errorMsg}`));
-                            return;
-                        }
-
-                        resolve(data.data);
+                        resolve(parseGraphQLResponse(
+                            message.get_status(),
+                            message.get_reason_phrase(),
+                            responseText
+                        ));
                     } catch (e) {
                         if (e.matches && e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED)) {
                             reject(new RequestCancelledError());
@@ -158,13 +181,14 @@ export class GithubClient {
      * @returns {Promise<{login: string, name: string, avatarUrl: string}>}
      */
     async verifyToken(token) {
-        const data = await this.executeQuery(VERIFY_USER_QUERY, {}, token);
+        const { data } = await this.executeQuery(VERIFY_USER_QUERY, {}, token);
         return data.viewer;
     }
 
     /**
      * Fetches all PR categories and viewer data.
-     * @returns {Promise<any>}
+     * @returns {Promise<GraphQLResult>} `errors` lists parts of the response
+     *   GitHub could not resolve (e.g. organizations enforcing SAML SSO)
      */
     async fetchAllPRs() {
         return await this.executeQuery(FETCH_ALL_PRS_QUERY);

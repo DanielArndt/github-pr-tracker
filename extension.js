@@ -160,8 +160,8 @@ export default class GitHubPRExtension extends Extension {
         this._indicator.menuView.setLoading(true);
 
         try {
-            const data = await this._githubClient.fetchAllPRs();
-            if (!isCurrent() || !data) return;
+            const { data, errors } = await this._githubClient.fetchAllPRs();
+            if (!isCurrent()) return;
 
             const viewerLogin = data.viewer?.login || '';
             if (viewerLogin && viewerLogin !== this._viewerLogin) {
@@ -191,6 +191,16 @@ export default class GitHubPRExtension extends Extension {
 
             this._applyFilterAndDisplay(this._rawPRItems);
             this._indicator.menuView.setLastUpdated(new Date());
+
+            // Partial results: show what loaded, but flag what did not
+            if (errors.length > 0) {
+                for (const e of errors) {
+                    console.warn('[GitHub PR Tracker] Partial GraphQL error:', e.message);
+                }
+                this._indicator.menuView.showError(
+                    `Some pull requests could not be loaded: ${errors[0].message}`
+                );
+            }
         } catch (err) {
             // A superseded or cancelled request leaves the UI to the newer one.
             if (!isCurrent() || err instanceof RequestCancelledError) return;

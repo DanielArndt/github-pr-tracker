@@ -4,7 +4,7 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
-import { GithubClient, RequestCancelledError } from '../src/api/githubClient.js';
+import { GithubClient, RequestCancelledError, parseGraphQLResponse } from '../src/api/githubClient.js';
 
 let passed = 0;
 let failed = 0;
@@ -117,6 +117,64 @@ console.log('--- Testing GitHub Client ---');
     assert(!(outcome instanceof RequestCancelledError) && outcome?.message === 'Network down',
         'Network errors are not reported as cancellations');
     assert(client._cancellable === null, 'Finished request clears its own cancellable');
+}
+
+console.log('--- Testing GraphQL Response Parsing ---');
+
+function parseError(...args) {
+    try {
+        parseGraphQLResponse(...args);
+        return null;
+    } catch (e) {
+        return e.message;
+    }
+}
+
+// Full success
+{
+    const body = JSON.stringify({ data: { viewer: { login: 'octocat' } } });
+    const result = parseGraphQLResponse(200, 'OK', body);
+    assert(result.data.viewer.login === 'octocat', 'Returns data on success');
+    assert(Array.isArray(result.errors) && result.errors.length === 0, 'Returns empty errors on success');
+}
+
+// Partial data with errors (e.g. SAML-protected organization)
+{
+    const body = JSON.stringify({
+        data: {
+            viewer: { login: 'octocat', pullRequests: { nodes: [{ id: 'PR_1' }, null] } },
+            reviewRequested: { nodes: [{ id: 'PR_2' }] },
+        },
+        errors: [{
+            type: 'FORBIDDEN',
+            path: ['viewer', 'pullRequests', 'nodes', 1],
+            message: 'Resource protected by organization SAML enforcement.',
+        }],
+    });
+    const result = parseGraphQLResponse(200, 'OK', body);
+    assert(result.data.viewer.pullRequests.nodes[0].id === 'PR_1', 'Keeps partial data when errors are present');
+    assert(result.data.reviewRequested.nodes.length === 1, 'Keeps unaffected fields');
+    assert(result.errors.length === 1 && result.errors[0].type === 'FORBIDDEN', 'Returns partial errors');
+}
+
+// Errors without data are fatal
+{
+    const body = JSON.stringify({ data: null, errors: [{ message: 'Something broke' }] });
+    assert(parseError(200, 'OK', body) === 'GraphQL error: Something broke', 'Rejects errors with null data');
+
+    const noData = JSON.stringify({ errors: [{ message: 'A' }, { message: 'B' }] });
+    assert(parseError(200, 'OK', noData) === 'GraphQL error: A; B', 'Rejects errors without data, joining messages');
+
+    assert(parseError(200, 'OK', '{}') === 'GraphQL error: Response contained no data', 'Rejects empty body');
+    assert(parseError(200, 'OK', 'null') === 'GraphQL error: Response contained no data', 'Rejects JSON null body');
+}
+
+// HTTP and parse errors
+{
+    assert(parseError(401, 'Unauthorized', '')?.includes('401'), 'Rejects 401');
+    assert(parseError(403, 'Forbidden', '')?.includes('403'), 'Rejects 403');
+    assert(parseError(502, 'Bad Gateway', '') === 'GitHub API error HTTP 502: Bad Gateway', 'Rejects other HTTP errors');
+    assert(parseError(200, 'OK', '<html>')?.startsWith('Failed to parse GitHub response'), 'Rejects invalid JSON');
 }
 
 console.log(`\nGitHub Client Tests finished: ${passed} passed, ${failed} failed.`);
