@@ -9,7 +9,7 @@ A GNOME Shell extension (compatible with GNOME Shell 45–50+) that tracks pull 
 - **Categorized PR Sections**:
   - ⚠️ **Action Required**: Pull requests authored by you that need your attention:
     - Reviewers requested changes (`CHANGES_REQUESTED`)
-    - Failing required CI checks (`isRequired === true` & failed)
+    - Failing required CI checks (checks required by branch protection, or failing checks that block merging when branch protection is not visible to you)
     - Merge conflicts with the target branch
     - Unresolved review comments/threads
   - 💬 **Needs My Review**: Pull requests from others where:
@@ -23,7 +23,7 @@ A GNOME Shell extension (compatible with GNOME Shell 45–50+) that tracks pull 
   - Displays 1–2 word reason pills (e.g. `Changes Requested`, `CI Failed`, `Conflicts`, `Unresolved Comments`) with support for multiple simultaneous reasons.
   - Clicking any pull request directly opens it in your default web browser.
 - **GNOME Shell Design Compliant**:
-  - Top bar panel indicator uses theme-neutral, non-distracting monochrome pill badges (`⚠️ 2`, `💬 3`, `✓ 1`) matching GNOME Shell aesthetics.
+  - Top bar panel indicator shows compact pill badges (`⚠️ 2`, `💬 3`, `✓ 1`), with palettes for both the dark and light GNOME Shell styles.
   - Automatically hides badges when counts are zero, displaying only the subtle GitHub icon.
 - **Secure Credential Storage**:
   - GitHub Personal Access Tokens are stored securely in your system keyring using `libsecret` (Secret Service API), never in plain text configuration files.
@@ -32,7 +32,7 @@ A GNOME Shell extension (compatible with GNOME Shell 45–50+) that tracks pull 
   - Toggle ignoring archived repositories and repository forks.
 - **Configurable Polling**:
   - Background polling interval configurable between 1 and 60 minutes (default 5 minutes).
-  - Manual "Refresh now" button in the menu footer.
+  - Manual refresh button in the menu footer.
 
 ### Limits
 
@@ -54,12 +54,21 @@ A GNOME Shell extension (compatible with GNOME Shell 45–50+) that tracks pull 
 Clone the repository and run:
 
 ```bash
+git clone https://github.com/DanielArndt/github-pr-tracker.git
+cd github-pr-tracker
 make install
 ```
 
 This compiles GSettings schemas, packages the extension, installs it to `~/.local/share/gnome-shell/extensions/github-pr-tracker@dan.arndt.ca`, and compiles schemas in place.
 
-After installing for the first time, log out and log back in (or on X11 press `Alt+F2`, type `r`, and hit `Enter`) to let GNOME Shell register the new extension.
+After installing for the first time, log out and log back in so GNOME Shell picks up the new extension. GNOME Shell cannot be restarted in place on Wayland.
+
+For development, you can instead test in a nested session without logging out:
+
+```bash
+dbus-run-session gnome-shell --devkit             # GNOME 49 and later
+dbus-run-session -- gnome-shell --nested --wayland # GNOME 45–48
+```
 
 Then enable the extension:
 ```bash
