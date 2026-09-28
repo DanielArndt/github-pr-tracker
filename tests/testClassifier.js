@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Daniel Arndt <dan@arndt.ca>
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { PRItem, CATEGORIES } from '../src/models/prItem.js';
+import { PRItem, CATEGORIES, CATEGORY_METADATA } from '../src/models/prItem.js';
 import { RepoFilter } from '../src/ui/repoFilter.js';
 
 let passed = 0;
@@ -300,6 +300,17 @@ console.log('\n--- Testing RepoFilter ---');
     assert(!filter.matches(prArchived), 'Filtered out archived repo');
     assert(!filter.matches(prFork), 'Filtered out forked repo');
     assert(filter.matches(prNormal), 'Allowed active normal repo');
+}
+
+console.log('\n--- Testing Category Metadata & Default Expansion ---');
+{
+    for (const [key, meta] of Object.entries(CATEGORY_METADATA)) {
+        if (key === CATEGORIES.DISMISSED) {
+            assertEqual(meta.defaultExpanded, false, `${key} (${meta.title}) section should not be expanded by default`);
+        } else {
+            assertEqual(meta.defaultExpanded, true, `${key} (${meta.title}) section should be expanded by default`);
+        }
+    }
 }
 
 console.log(`\nTests finished: ${passed} passed, ${failed} failed.`);

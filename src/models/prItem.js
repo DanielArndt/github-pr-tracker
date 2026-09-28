@@ -37,14 +37,14 @@ export const CATEGORY_METADATA = {
         title: 'Waiting on Review',
         symbol: '⏳',
         iconName: 'alarm-symbolic',
-        defaultExpanded: false,
+        defaultExpanded: true,
     },
     [CATEGORIES.DRAFT]: {
         id: CATEGORIES.DRAFT,
         title: 'Draft PRs',
         symbol: '📝',
         iconName: 'document-edit-symbolic',
-        defaultExpanded: false,
+        defaultExpanded: true,
     },
     [CATEGORIES.DISMISSED]: {
         id: CATEGORIES.DISMISSED,
