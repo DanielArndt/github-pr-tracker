@@ -7,6 +7,7 @@ import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import { Indicator } from './src/ui/indicator.js';
 import { GithubClient } from './src/api/githubClient.js';
 import { loadToken } from './src/api/keyring.js';
+import { syncClientToken } from './src/api/tokenSync.js';
 import { RepoFilter } from './src/ui/repoFilter.js';
 import { PRItem, CATEGORIES } from './src/models/prItem.js';
 import {
@@ -62,20 +63,17 @@ export default class GitHubPRExtension extends Extension {
     }
 
     async _initSession() {
-        try {
-            const token = await loadToken();
-            if (token && token.trim().length > 0) {
-                this._githubClient.setToken(token);
-                await this.refreshData();
-            } else {
-                this._indicator.menuView.showTokenRequired();
-            }
-        } catch (err) {
-            console.error('[GitHub PR Tracker] Keyring load error:', err);
-            this._indicator.menuView.showError('Failed to access system keyring.');
-        }
-
+        await this.refreshData();
         this._startTimer();
+    }
+
+    /**
+     * Drops cached PR data and clears the panel badges and menu sections.
+     */
+    _clearData() {
+        this._rawNodes = [];
+        this._rawPRItems = [];
+        this._indicator.updateCounts(new Map());
     }
 
     _onFilterSettingsChanged() {
@@ -125,20 +123,21 @@ export default class GitHubPRExtension extends Extension {
      * @param {boolean} [isManual]
      */
     async refreshData(isManual = false) {
-        if (!this._githubClient || !this._githubClient.hasToken()) {
-            // Check keyring again in case token was saved recently in Preferences
-            try {
-                const token = await loadToken();
-                if (token && token.trim().length > 0) {
-                    this._githubClient.setToken(token);
-                } else {
-                    this._indicator.menuView.showTokenRequired();
-                    return;
-                }
-            } catch (e) {
-                this._indicator.menuView.showTokenRequired();
-                return;
-            }
+        // Always re-read the keyring so tokens saved, replaced or cleared in
+        // Preferences take effect without re-enabling the extension.
+        let hasToken;
+        try {
+            hasToken = await syncClientToken(this._githubClient, loadToken);
+        } catch (err) {
+            console.error('[GitHub PR Tracker] Keyring load error:', err);
+            this._indicator.menuView.showError('Failed to access system keyring.');
+            return;
+        }
+
+        if (!hasToken) {
+            this._clearData();
+            this._indicator.menuView.showTokenRequired();
+            return;
         }
 
         this._indicator.menuView.setLoading(true);
