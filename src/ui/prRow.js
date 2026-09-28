@@ -122,10 +122,24 @@ class PRRow extends PopupMenu.PopupBaseMenuItem {
             } else if (this._onDismiss) {
                 this._onDismiss(this._pr);
             }
-            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                this._isActionClick = false;
-                return GLib.SOURCE_REMOVE;
-            });
+            // Reset once the current click has finished propagating. Dismiss
+            // and undo usually rebuild the list and destroy this row first,
+            // so the source is tracked and removed on destroy.
+            if (!this._resetActionClickId) {
+                this._resetActionClickId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                    this._resetActionClickId = 0;
+        this._isActionClick = false;
+        this._resetActionClickId = 0;
+
+        this.connect('destroy', () => {
+            if (this._resetActionClickId) {
+                GLib.Source.remove(this._resetActionClickId);
+                this._resetActionClickId = 0;
+            }
+        });
+                    return GLib.SOURCE_REMOVE;
+                });
+            }
         });
 
         headerBox.add_child(repoLabel);
