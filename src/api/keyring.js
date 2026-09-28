@@ -6,17 +6,29 @@ import Gio from 'gi://Gio';
 
 const SCHEMA_NAME = 'org.gnome.shell.extensions.github_pr_tracker';
 
-const SECRET_SCHEMA = new Secret.Schema(
-    SCHEMA_NAME,
-    Secret.SchemaFlags.NONE,
-    {
-        'app': Secret.SchemaAttributeType.STRING,
-    }
-);
-
 const SCHEMA_ATTRS = {
     'app': 'github-pr-tracker',
 };
+
+let _schema = null;
+
+/**
+ * Returns the libsecret schema, creating it on first use. EGO guidelines ask
+ * extensions not to create GObjects at import time, only once enabled.
+ * @returns {Secret.Schema}
+ */
+function getSchema() {
+    if (!_schema) {
+        _schema = new Secret.Schema(
+            SCHEMA_NAME,
+            Secret.SchemaFlags.NONE,
+            {
+                'app': Secret.SchemaAttributeType.STRING,
+            }
+        );
+    }
+    return _schema;
+}
 
 /**
  * Stores the GitHub Personal Access Token in the system keyring.
@@ -26,7 +38,7 @@ const SCHEMA_ATTRS = {
 export function storeToken(token) {
     return new Promise((resolve, reject) => {
         Secret.password_store(
-            SECRET_SCHEMA,
+            getSchema(),
             SCHEMA_ATTRS,
             Secret.COLLECTION_DEFAULT,
             'GitHub PR Tracker Access Token',
@@ -51,7 +63,7 @@ export function storeToken(token) {
 export function loadToken() {
     return new Promise((resolve, reject) => {
         Secret.password_lookup(
-            SECRET_SCHEMA,
+            getSchema(),
             SCHEMA_ATTRS,
             null,
             (source, res) => {
@@ -73,7 +85,7 @@ export function loadToken() {
 export function deleteToken() {
     return new Promise((resolve, reject) => {
         Secret.password_clear(
-            SECRET_SCHEMA,
+            getSchema(),
             SCHEMA_ATTRS,
             null,
             (source, res) => {
