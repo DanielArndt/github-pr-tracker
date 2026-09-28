@@ -19,6 +19,7 @@ import {
 export default class GitHubPRExtension extends Extension {
     enable() {
         this._settings = this.getSettings();
+        this._rawNodes = [];
         this._rawPRItems = [];
         this._viewerLogin = this._settings.get_string('last-username') || '';
 
@@ -84,7 +85,7 @@ export default class GitHubPRExtension extends Extension {
         });
 
         // Re-classify and re-filter cached PR items without making another network request
-        if (this._rawNodes && this._rawNodes.length > 0) {
+        if (this._rawNodes.length > 0) {
             const includeTeamReviews = this._settings.get_boolean('include-team-reviews');
             this._rawPRItems = this._rawNodes.map(
                 node => new PRItem(node, this._viewerLogin, { includeTeamReviews })
@@ -293,6 +294,8 @@ export default class GitHubPRExtension extends Extension {
         }
 
         this._settings = null;
+        this._repoFilter = null;
+        this._rawNodes = [];
         this._rawPRItems = [];
     }
 }
