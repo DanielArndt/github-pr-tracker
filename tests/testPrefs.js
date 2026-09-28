@@ -28,7 +28,6 @@ app.connect('activate', () => {
         const metadata = {
             'uuid': 'github-pr-tracker@dan.arndt.ca',
             'settings-schema': 'org.gnome.shell.extensions.github-pr-tracker',
-            'gettext-domain': 'github-pr-tracker',
             'path': GLib.get_current_dir(),
             'dir': Gio.File.new_for_path(GLib.get_current_dir()),
         };
