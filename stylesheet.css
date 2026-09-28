@@ -224,10 +224,11 @@
 }
 
 /*
- * Light Shell style (GNOME 47+ following the system light preference).
- * .pr-light is added to the indicator and its menu by src/ui/styleVariant.js.
- * Text colors are darkened for contrast on the light panel and menu
- * backgrounds; translucent white fills become translucent black.
+ * Light backgrounds. src/ui/styleVariant.js adds .pr-light to the panel
+ * indicator and to its menu independently, whenever the Shell theme gives
+ * that widget dark text (e.g. GNOME's light style, or only the menu under
+ * Ubuntu's Yaru, whose top bar stays dark). Text colors are darkened for
+ * contrast and translucent white fills become translucent black.
  */
 .pr-light .pr-panel-pill {
     background-color: rgba(0, 0, 0, 0.08);

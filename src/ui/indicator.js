@@ -7,7 +7,7 @@ import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import { MenuView } from './menuView.js';
-import { trackStyleVariant } from './styleVariant.js';
+import { trackLightBackground } from './styleVariant.js';
 import { CATEGORIES, CATEGORY_METADATA } from '../models/prItem.js';
 
 /** Categories shown as count pills in the top bar, in display order. */
@@ -65,9 +65,11 @@ class Indicator extends PanelMenu.Button {
         // Build popup menu view
         this.menuView = new MenuView(this.menu, this._extension, this._onRefresh, callbacks);
 
-        // Switch to the light palette in stylesheet.css when the Shell uses a
-        // light style. The menu is not a child of the button, so tag both.
-        trackStyleVariant(this, [this, this.menu.actor]);
+        // Switch to the light palette in stylesheet.css wherever the theme
+        // draws dark text. The panel and menu can differ (e.g. Yaru keeps a
+        // dark top bar in light mode), and the menu is not a child of the
+        // button, so each is checked on its own.
+        trackLightBackground(this, [this, this.menu.actor]);
     }
 
     /**
