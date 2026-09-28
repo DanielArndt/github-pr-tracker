@@ -50,6 +50,8 @@ export default class GitHubPRExtensionPreferences extends ExtensionPreferences {
         const statusRow = new Adw.ActionRow({
             title: 'Connection Status',
             subtitle: 'Checking keyring...',
+            // Subtitle shows GitHub display names and error messages verbatim
+            use_markup: false,
         });
 
         const testBtn = new Gtk.Button({

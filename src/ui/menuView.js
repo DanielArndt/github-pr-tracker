@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Daniel Arndt <dan@arndt.ca>
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+import GLib from 'gi://GLib';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
@@ -191,7 +192,9 @@ export class MenuView {
      */
     setUsername(username) {
         if (username) {
-            this._headerItem.label.clutter_text.set_markup(`<b>GitHub PRs (@${username})</b>`);
+            // The login comes from GSettings, so escape it before using markup
+            const escaped = GLib.markup_escape_text(username, -1);
+            this._headerItem.label.clutter_text.set_markup(`<b>GitHub PRs (@${escaped})</b>`);
         } else {
             this._headerItem.label.clutter_text.set_markup('<b>GitHub Pull Requests</b>');
         }
