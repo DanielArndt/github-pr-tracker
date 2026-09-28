@@ -76,6 +76,19 @@ Before submitting changes, make sure all test suites pass:
 make test
 ```
 
+The preferences test opens a GTK window, so it needs a graphical session; on a headless machine run `xvfb-run -a make test`.
+
+### Linting
+
+The code is checked with [ESLint](https://eslint.org/). Install it once with Node.js 20.19 or later, then run the linter:
+
+```bash
+npm ci
+make lint
+```
+
+CI runs both `make lint` and `make test` on every pull request.
+
 ### Building & Local Installation
 
 Install the extension into your local GNOME Shell environment for testing:
@@ -96,6 +109,6 @@ make clean
 
 1. **Branch Naming**: Use descriptive branch names like `feat/team-review-toggle` or `fix/graphql-null-check`.
 2. **Test Coverage**: When adding features or fixing bugs, add corresponding unit tests in `tests/`.
-3. **Check Build**: Ensure `make test` runs cleanly without errors.
+3. **Check Build**: Ensure `make test` and `make lint` run cleanly without errors.
 4. **Commit Messages**: Ensure all commits follow the Conventional Commits specification.
 5. **PR Description**: Clearly describe what changes were made, why they are needed, and how they were tested.

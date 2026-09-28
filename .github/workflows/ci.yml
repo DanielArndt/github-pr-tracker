@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: make lint
+
+  # Oldest widely available GNOME Shell (46), /usr/lib/gnome-shell layout
+  test-ubuntu:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install GNOME dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gjs gnome-shell gnome-shell-common \
+            gir1.2-soup-3.0 gir1.2-secret-1 gir1.2-adw-1 gir1.2-gtk-4.0 \
+            libglib2.0-bin make xvfb xauth
+      # The preferences test builds a GTK window, so it needs a display
+      - run: xvfb-run -a make test
+      - run: make pack
+
+  # Latest GNOME Shell, /usr/lib64/gnome-shell layout
+  test-fedora:
+    runs-on: ubuntu-24.04
+    container: fedora:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install GNOME dependencies
+        run: |
+          dnf install -y gjs gnome-shell libsoup3 libsecret gtk4 libadwaita \
+            glib2 make xorg-x11-server-Xvfb xauth
+      - run: xvfb-run -a make test
+      - run: make pack
