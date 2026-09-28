@@ -59,13 +59,10 @@ export default class GitHubPRExtension extends Extension {
             this._settings.connect(`changed::${TOKEN_CHANGED_KEY}`, () => this.refreshData(true)),
         ];
 
-        // Load token from keyring and start
-        this._initSession();
-    }
-
-    async _initSession() {
-        await this.refreshData();
+        // Start polling synchronously so nothing needs to run after an await
+        // if the extension is disabled while the first refresh is pending.
         this._startTimer();
+        this.refreshData();
     }
 
     /**
