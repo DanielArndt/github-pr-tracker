@@ -18,6 +18,10 @@ const { default: GitHubPRExtensionPreferences } = await import('../prefs.js');
 
 const app = new Adw.Application({ application_id: 'org.gnome.test.prprefs' });
 
+// Errors thrown inside signal handlers are only logged by GJS and do not
+// affect the exit status, so record the failure and rethrow after run().
+let failure = null;
+
 app.connect('activate', () => {
     try {
         const window = new Adw.PreferencesWindow({ application: app });
@@ -44,9 +48,13 @@ app.connect('activate', () => {
         app.quit();
     } catch (e) {
         console.error('✗ Error testing preferences:', e, e.stack);
+        failure = e;
         app.quit();
-        throw e;
     }
 });
 
 app.run([]);
+
+if (failure) {
+    throw failure;
+}
