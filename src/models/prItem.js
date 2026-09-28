@@ -184,14 +184,12 @@ export class PRItem {
         this.mergeStateStatus = rawNode.mergeStateStatus || 'UNKNOWN';
         this.reviewDecision = rawNode.reviewDecision || null;
         this.updatedAt = rawNode.updatedAt ? new Date(rawNode.updatedAt) : new Date();
-        this.createdAt = rawNode.createdAt ? new Date(rawNode.createdAt) : new Date();
 
         this.repoName = rawNode.repository?.nameWithOwner || '';
         this.isArchived = !!rawNode.repository?.isArchived;
         this.isFork = !!rawNode.repository?.isFork;
 
         this.author = rawNode.author?.login || 'unknown';
-        this.authorAvatarUrl = rawNode.author?.avatarUrl || null;
 
         this.isAuthoredByViewer = this.author.toLowerCase() === (viewerLogin || '').toLowerCase();
 

@@ -203,11 +203,8 @@ export class MenuView {
     updateData(categorizedPRs) {
         this._statusItem.actor.hide();
 
-        let totalPRs = 0;
         for (const [catId, section] of this._sections.entries()) {
-            const items = categorizedPRs.get(catId) || [];
-            totalPRs += items.length;
-            section.setPRs(items);
+            section.setPRs(categorizedPRs.get(catId) || []);
         }
     }
 

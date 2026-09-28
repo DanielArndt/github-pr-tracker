@@ -8,7 +8,14 @@ import Gio from 'gi://Gio';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import { MenuView } from './menuView.js';
 import { trackStyleVariant } from './styleVariant.js';
-import { CATEGORIES } from '../models/prItem.js';
+import { CATEGORIES, CATEGORY_METADATA } from '../models/prItem.js';
+
+/** Categories shown as count pills in the top bar, in display order. */
+const PANEL_BADGE_CATEGORIES = [
+    CATEGORIES.ACTION_REQUIRED,
+    CATEGORIES.NEEDS_MY_REVIEW,
+    CATEGORIES.READY_TO_MERGE,
+];
 
 export const Indicator = GObject.registerClass(
 class Indicator extends PanelMenu.Button {
@@ -40,29 +47,17 @@ class Indicator extends PanelMenu.Button {
             y_align: Clutter.ActorAlign.CENTER,
         });
 
-        // 1. Action Required badge (e.g. ⚠️ 2)
-        this._actionBadge = new St.Label({
-            style_class: 'pr-panel-pill',
-            y_align: Clutter.ActorAlign.CENTER,
-        });
-        this._actionBadge.hide();
-        this._badgeBox.add_child(this._actionBadge);
-
-        // 2. Needs My Review badge (e.g. 💬 3)
-        this._reviewBadge = new St.Label({
-            style_class: 'pr-panel-pill',
-            y_align: Clutter.ActorAlign.CENTER,
-        });
-        this._reviewBadge.hide();
-        this._badgeBox.add_child(this._reviewBadge);
-
-        // 3. Ready to Merge badge (e.g. ✓ 1)
-        this._mergeBadge = new St.Label({
-            style_class: 'pr-panel-pill',
-            y_align: Clutter.ActorAlign.CENTER,
-        });
-        this._mergeBadge.hide();
-        this._badgeBox.add_child(this._mergeBadge);
+        // One pill per panel category, e.g. "⚠️ 2", hidden while the count is zero
+        this._badges = new Map();
+        for (const catId of PANEL_BADGE_CATEGORIES) {
+            const badge = new St.Label({
+                style_class: 'pr-panel-pill',
+                y_align: Clutter.ActorAlign.CENTER,
+            });
+            badge.hide();
+            this._badgeBox.add_child(badge);
+            this._badges.set(catId, badge);
+        }
 
         box.add_child(this._badgeBox);
         this.add_child(box);
@@ -80,36 +75,14 @@ class Indicator extends PanelMenu.Button {
      * @param {Map<string, Array<any>>} categorizedPRs
      */
     updateCounts(categorizedPRs) {
-        const actionItems = categorizedPRs.get(CATEGORIES.ACTION_REQUIRED) || [];
-        const reviewItems = categorizedPRs.get(CATEGORIES.NEEDS_MY_REVIEW) || [];
-        const mergeItems = categorizedPRs.get(CATEGORIES.READY_TO_MERGE) || [];
-
-        const actionCount = actionItems.length;
-        const reviewCount = reviewItems.length;
-        const mergeCount = mergeItems.length;
-
-        // Action Required pill
-        if (actionCount > 0) {
-            this._actionBadge.text = `⚠️ ${actionCount}`;
-            this._actionBadge.show();
-        } else {
-            this._actionBadge.hide();
-        }
-
-        // Needs My Review pill
-        if (reviewCount > 0) {
-            this._reviewBadge.text = `💬 ${reviewCount}`;
-            this._reviewBadge.show();
-        } else {
-            this._reviewBadge.hide();
-        }
-
-        // Ready to Merge pill
-        if (mergeCount > 0) {
-            this._mergeBadge.text = `✓ ${mergeCount}`;
-            this._mergeBadge.show();
-        } else {
-            this._mergeBadge.hide();
+        for (const [catId, badge] of this._badges) {
+            const count = (categorizedPRs.get(catId) || []).length;
+            if (count > 0) {
+                badge.text = `${CATEGORY_METADATA[catId].symbol} ${count}`;
+                badge.show();
+            } else {
+                badge.hide();
+            }
         }
 
         // Forward full data to dropdown menu

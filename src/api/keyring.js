@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import Secret from 'gi://Secret';
-import Gio from 'gi://Gio';
 
 const SCHEMA_NAME = 'org.gnome.shell.extensions.github_pr_tracker';
 

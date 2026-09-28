@@ -12,7 +12,6 @@ fragment AuthoredPRDetails on PullRequest {
   mergeStateStatus
   reviewDecision
   updatedAt
-  createdAt
   repository {
     nameWithOwner
     isArchived
@@ -20,7 +19,6 @@ fragment AuthoredPRDetails on PullRequest {
   }
   author {
     login
-    avatarUrl
   }
   baseRef {
     name
@@ -44,7 +42,6 @@ fragment AuthoredPRDetails on PullRequest {
         login
       }
       state
-      createdAt
     }
   }
   reviewThreads(first: 20) {
@@ -81,7 +78,6 @@ fragment SearchPRDetails on PullRequest {
   isDraft
   mergeable
   updatedAt
-  createdAt
   repository {
     nameWithOwner
     isArchived
@@ -89,7 +85,6 @@ fragment SearchPRDetails on PullRequest {
   }
   author {
     login
-    avatarUrl
   }
   reviewRequests(first: 10) {
     nodes {
@@ -107,7 +102,6 @@ fragment SearchPRDetails on PullRequest {
         login
       }
       state
-      createdAt
     }
   }
 }
@@ -120,7 +114,6 @@ ${SEARCH_PR_FRAGMENT}
 query PullRequestsData {
   viewer {
     login
-    avatarUrl
     pullRequests(first: 30, states: [OPEN], orderBy: {field: UPDATED_AT, direction: DESC}) {
       nodes {
         ...AuthoredPRDetails
@@ -142,7 +135,6 @@ query VerifyUser {
   viewer {
     login
     name
-    avatarUrl
   }
 }
 `;

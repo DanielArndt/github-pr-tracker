@@ -14,8 +14,6 @@ class CollapsibleSection extends PopupMenu.PopupSubMenuMenuItem {
     _init(categoryId, title, iconName, defaultExpanded = false, callbacks = {}) {
         super._init(title, true);
         this.add_style_class_name('pr-section-header');
-        this._categoryId = categoryId;
-        this._title = title;
         this._defaultExpanded = defaultExpanded;
         this._onDismiss = callbacks.onDismiss || null;
         this._onUndo = callbacks.onUndo || null;
@@ -86,14 +84,6 @@ class CollapsibleSection extends PopupMenu.PopupSubMenuMenuItem {
 
     onMenuOpened() {
         this._syncOpenState();
-    }
-
-    get categoryId() {
-        return this._categoryId;
-    }
-
-    get count() {
-        return this._items.length;
     }
 
     setCount(count) {

@@ -85,10 +85,6 @@ export class GithubClient {
         this._token = token;
     }
 
-    hasToken() {
-        return !!this._token && this._token.trim().length > 0;
-    }
-
     cancelPending() {
         if (this._cancellable) {
             this._cancellable.cancel();

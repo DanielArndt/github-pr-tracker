@@ -9,7 +9,7 @@ import { GithubClient, RequestCancelledError } from './src/api/githubClient.js';
 import { loadToken } from './src/api/keyring.js';
 import { syncClientToken, TOKEN_CHANGED_KEY } from './src/api/tokenSync.js';
 import { RepoFilter } from './src/ui/repoFilter.js';
-import { PRItem, CATEGORIES } from './src/models/prItem.js';
+import { PRItem } from './src/models/prItem.js';
 import {
     recordDismissal,
     removeDismissal,
@@ -36,7 +36,7 @@ export default class GitHubPRExtension extends Extension {
         // Initialize Indicator in GNOME top panel
         this._indicator = new Indicator(
             this,
-            () => this.refreshData(true),
+            () => this.refreshData(),
             {
                 onDismiss: (pr) => this.dismissPR(pr),
                 onUndo: (pr) => this.restorePR(pr),
@@ -50,13 +50,13 @@ export default class GitHubPRExtension extends Extension {
 
         // Connect settings change listeners
         this._settingsChangedIds = [
-            this._settings.connect('changed::refresh-interval', () => this._restartTimer()),
+            this._settings.connect('changed::refresh-interval', () => this._startTimer()),
             this._settings.connect('changed::include-repos', () => this._onFilterSettingsChanged()),
             this._settings.connect('changed::exclude-repos', () => this._onFilterSettingsChanged()),
             this._settings.connect('changed::ignore-archived', () => this._onFilterSettingsChanged()),
             this._settings.connect('changed::ignore-forks', () => this._onFilterSettingsChanged()),
             this._settings.connect('changed::include-team-reviews', () => this._onFilterSettingsChanged()),
-            this._settings.connect(`changed::${TOKEN_CHANGED_KEY}`, () => this.refreshData(true)),
+            this._settings.connect(`changed::${TOKEN_CHANGED_KEY}`, () => this.refreshData()),
         ];
 
         // Start polling synchronously so nothing needs to run after an await
@@ -113,10 +113,6 @@ export default class GitHubPRExtension extends Extension {
         }
     }
 
-    _restartTimer() {
-        this._startTimer();
-    }
-
     /**
      * Invalidates any refresh currently in flight so its results are dropped.
      * @returns {number} the new refresh generation
@@ -131,9 +127,8 @@ export default class GitHubPRExtension extends Extension {
      *
      * Overlapping calls are allowed (timer, manual refresh, token change);
      * only the most recent one updates the UI.
-     * @param {boolean} [isManual]
      */
-    async refreshData(isManual = false) {
+    async refreshData() {
         const generation = this._bumpRefreshGeneration();
         const isCurrent = () => generation === this._refreshGeneration;
 
