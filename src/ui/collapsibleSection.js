@@ -4,6 +4,7 @@
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
+import Atk from 'gi://Atk';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import { PRRow } from './prRow.js';
 import { CATEGORIES } from '../models/prItem.js';
@@ -19,7 +20,7 @@ class CollapsibleSection extends PopupMenu.PopupSubMenuMenuItem {
         this._onDismiss = callbacks.onDismiss || null;
         this._onUndo = callbacks.onUndo || null;
         this._isDismissedSection = (categoryId === CATEGORIES.DISMISSED);
-        this._hasInitialized = false;
+        this._userToggled = false;
 
         if (this.icon && iconName) {
             this.icon.icon_name = iconName;
@@ -40,6 +41,39 @@ class CollapsibleSection extends PopupMenu.PopupSubMenuMenuItem {
         }
 
         this._items = [];
+    }
+
+    _subMenuOpenStateChanged(menu, open) {
+        if (open) {
+            this.add_style_pseudo_class('open');
+            this.add_accessible_state(Atk.StateType.EXPANDED);
+            this.add_style_pseudo_class('checked');
+        } else {
+            this.remove_style_pseudo_class('open');
+            this.remove_accessible_state(Atk.StateType.EXPANDED);
+            this.remove_style_pseudo_class('checked');
+        }
+    }
+
+    activate(event) {
+        this._userToggled = true;
+        super.activate(event);
+    }
+
+    setSubmenuShown(open, animate = false) {
+        if (open)
+            this.menu.open(animate);
+        else
+            this.menu.close(animate);
+    }
+
+    onMenuOpened() {
+        const shouldBeOpen = this._userToggled
+            ? this.menu.isOpen
+            : (this._defaultExpanded && this._items.length > 0);
+        if (shouldBeOpen && !this.menu.isOpen) {
+            this.setSubmenuShown(true, false);
+        }
     }
 
     get categoryId() {
@@ -70,13 +104,13 @@ class CollapsibleSection extends PopupMenu.PopupSubMenuMenuItem {
      * @param {Array<import('../models/prItem.js').PRItem>} prItems
      */
     setPRs(prItems) {
-        const wasOpen = this.menu.isOpen;
-        const shouldBeOpen = this._hasInitialized ? wasOpen : (this._defaultExpanded && prItems.length > 0);
-        this._hasInitialized = true;
-
         this.clear();
         this._items = prItems;
         this.setCount(prItems.length);
+
+        const shouldBeOpen = this._userToggled
+            ? this.menu.isOpen
+            : (this._defaultExpanded && prItems.length > 0);
 
         if (prItems.length === 0) {
             const emptyItem = new PopupMenu.PopupMenuItem('No pull requests', {
@@ -84,6 +118,9 @@ class CollapsibleSection extends PopupMenu.PopupSubMenuMenuItem {
                 style_class: 'pr-empty-item',
             });
             this.menu.addMenuItem(emptyItem);
+            if (this.menu.isOpen && !this._userToggled) {
+                this.setSubmenuShown(false, false);
+            }
             return;
         }
 
@@ -96,8 +133,10 @@ class CollapsibleSection extends PopupMenu.PopupSubMenuMenuItem {
             this.menu.addMenuItem(row);
         }
 
-        if (shouldBeOpen && prItems.length > 0) {
-            this.setSubmenuShown(true);
+        if (shouldBeOpen && !this.menu.isOpen) {
+            this.setSubmenuShown(true, false);
+        } else if (!shouldBeOpen && this.menu.isOpen) {
+            this.setSubmenuShown(false, false);
         }
     }
 });

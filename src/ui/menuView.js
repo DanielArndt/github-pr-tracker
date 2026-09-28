@@ -48,6 +48,9 @@ export class MenuView {
 
         this._menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
+        // Prevent GNOME Shell from closing open submenus when another submenu opens
+        this._menu._setOpenedSubMenu = () => {};
+
         // 3. The Collapsible Sections
         const sectionOrder = [
             CATEGORIES.ACTION_REQUIRED,
@@ -69,7 +72,18 @@ export class MenuView {
             );
             this._sections.set(catId, section);
             this._menu.addMenuItem(section);
+            // Disconnect GNOME Shell's default menu-closed handler which forces all submenus to close when dropdown closes
+            this._menu.disconnectObject(section);
         }
+
+        // Re-expand default-expanded sections whenever the dropdown menu opens
+        this._menuOpenStateId = this._menu.connect('open-state-changed', (menu, open) => {
+            if (open) {
+                for (const section of this._sections.values()) {
+                    section.onMenuOpened();
+                }
+            }
+        });
 
         // 4. Separator & Footer
         this._menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
@@ -217,6 +231,10 @@ export class MenuView {
     }
 
     destroy() {
+        if (this._menuOpenStateId) {
+            this._menu.disconnect(this._menuOpenStateId);
+            this._menuOpenStateId = null;
+        }
         for (const section of this._sections.values()) {
             section.clear();
         }
