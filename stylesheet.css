@@ -196,3 +196,29 @@
     padding: 3px 6px;
     border-radius: 6px;
 }
+
+/* Action Buttons (Dismiss & Undo) */
+.pr-menu-item-dismissed {
+    opacity: 0.75;
+}
+
+.pr-dismiss-btn,
+.pr-undo-btn {
+    padding: 1px 4px;
+    border-radius: 4px;
+    color: #999999;
+    opacity: 0.6;
+    margin-left: 2px;
+}
+
+.pr-dismiss-btn:hover,
+.pr-undo-btn:hover {
+    color: #ffffff;
+    opacity: 1.0;
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.pr-dismiss-btn:active,
+.pr-undo-btn:active {
+    background-color: rgba(255, 255, 255, 0.25);
+}

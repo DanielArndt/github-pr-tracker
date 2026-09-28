@@ -12,11 +12,13 @@ export class MenuView {
      * @param {PopupMenu.PopupMenu} menu
      * @param {Object} extension
      * @param {Function} onRefresh
+     * @param {Object} [callbacks]
      */
-    constructor(menu, extension, onRefresh) {
+    constructor(menu, extension, onRefresh, callbacks = {}) {
         this._menu = menu;
         this._extension = extension;
         this._onRefresh = onRefresh;
+        this._callbacks = callbacks;
 
         this._sections = new Map();
         this._lastUpdated = null;
@@ -46,13 +48,14 @@ export class MenuView {
 
         this._menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-        // 3. The 5 Collapsible Sections
+        // 3. The Collapsible Sections
         const sectionOrder = [
             CATEGORIES.ACTION_REQUIRED,
             CATEGORIES.NEEDS_MY_REVIEW,
             CATEGORIES.READY_TO_MERGE,
             CATEGORIES.WAITING_REVIEW,
             CATEGORIES.DRAFT,
+            CATEGORIES.DISMISSED,
         ];
 
         for (const catId of sectionOrder) {
@@ -61,7 +64,8 @@ export class MenuView {
                 meta.id,
                 meta.title,
                 meta.iconName,
-                meta.defaultExpanded
+                meta.defaultExpanded,
+                this._callbacks
             );
             this._sections.set(catId, section);
             this._menu.addMenuItem(section);

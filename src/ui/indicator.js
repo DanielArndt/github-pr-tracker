@@ -11,7 +11,7 @@ import { CATEGORIES } from '../models/prItem.js';
 
 export const Indicator = GObject.registerClass(
 class Indicator extends PanelMenu.Button {
-    _init(extension, onRefresh) {
+    _init(extension, onRefresh, callbacks = {}) {
         super._init(0.0, 'GitHub PR Tracker');
         this._extension = extension;
         this._onRefresh = onRefresh;
@@ -67,7 +67,7 @@ class Indicator extends PanelMenu.Button {
         this.add_child(box);
 
         // Build popup menu view
-        this.menuView = new MenuView(this.menu, this._extension, this._onRefresh);
+        this.menuView = new MenuView(this.menu, this._extension, this._onRefresh, callbacks);
     }
 
     /**

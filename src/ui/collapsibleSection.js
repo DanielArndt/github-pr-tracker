@@ -6,15 +6,20 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import { PRRow } from './prRow.js';
+import { CATEGORIES } from '../models/prItem.js';
 
 export const CollapsibleSection = GObject.registerClass(
 class CollapsibleSection extends PopupMenu.PopupSubMenuMenuItem {
-    _init(categoryId, title, iconName, defaultExpanded = false) {
+    _init(categoryId, title, iconName, defaultExpanded = false, callbacks = {}) {
         super._init(title, true);
         this.add_style_class_name('pr-section-header');
         this._categoryId = categoryId;
         this._title = title;
         this._defaultExpanded = defaultExpanded;
+        this._onDismiss = callbacks.onDismiss || null;
+        this._onUndo = callbacks.onUndo || null;
+        this._isDismissedSection = (categoryId === CATEGORIES.DISMISSED);
+        this._hasInitialized = false;
 
         if (this.icon && iconName) {
             this.icon.icon_name = iconName;
@@ -65,6 +70,10 @@ class CollapsibleSection extends PopupMenu.PopupSubMenuMenuItem {
      * @param {Array<import('../models/prItem.js').PRItem>} prItems
      */
     setPRs(prItems) {
+        const wasOpen = this.menu.isOpen;
+        const shouldBeOpen = this._hasInitialized ? wasOpen : (this._defaultExpanded && prItems.length > 0);
+        this._hasInitialized = true;
+
         this.clear();
         this._items = prItems;
         this.setCount(prItems.length);
@@ -79,11 +88,15 @@ class CollapsibleSection extends PopupMenu.PopupSubMenuMenuItem {
         }
 
         for (const item of prItems) {
-            const row = new PRRow(item);
+            const row = new PRRow(item, {
+                onDismiss: this._onDismiss,
+                onUndo: this._onUndo,
+                isDismissed: this._isDismissedSection,
+            });
             this.menu.addMenuItem(row);
         }
 
-        if (this._defaultExpanded && prItems.length > 0) {
+        if (shouldBeOpen && prItems.length > 0) {
             this.setSubmenuShown(true);
         }
     }

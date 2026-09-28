@@ -43,5 +43,11 @@
       <summary>Last detected GitHub username</summary>
       <description>Cached login of the authenticated GitHub account.</description>
     </key>
+
+    <key name="dismissed-prs" type="s">
+      <default>"{}"</default>
+      <summary>Dismissed pull requests</summary>
+      <description>JSON-encoded dictionary mapping PR identifiers to the ISO timestamp when dismissed.</description>
+    </key>
   </schema>
 </schemalist>

@@ -9,6 +9,11 @@ import { GithubClient } from './src/api/githubClient.js';
 import { loadToken } from './src/api/keyring.js';
 import { RepoFilter } from './src/ui/repoFilter.js';
 import { PRItem, CATEGORIES } from './src/models/prItem.js';
+import {
+    recordDismissal,
+    removeDismissal,
+    categorizeAndPruneDismissed,
+} from './src/models/dismissTracker.js';
 
 export default class GitHubPRExtension extends Extension {
     enable() {
@@ -28,7 +33,14 @@ export default class GitHubPRExtension extends Extension {
         this._githubClient = new GithubClient();
 
         // Initialize Indicator in GNOME top panel
-        this._indicator = new Indicator(this, () => this.refreshData(true));
+        this._indicator = new Indicator(
+            this,
+            () => this.refreshData(true),
+            {
+                onDismiss: (pr) => this.dismissPR(pr),
+                onUndo: (pr) => this.restorePR(pr),
+            }
+        );
         Main.panel.addToStatusArea(this.uuid, this._indicator);
 
         if (this._viewerLogin) {
@@ -170,28 +182,61 @@ export default class GitHubPRExtension extends Extension {
         }
     }
 
+    _loadDismissedMap() {
+        try {
+            const jsonStr = this._settings ? this._settings.get_string('dismissed-prs') : '{}';
+            return jsonStr ? JSON.parse(jsonStr) : {};
+        } catch (err) {
+            console.error('[GitHub PR Tracker] Error parsing dismissed-prs:', err);
+            return {};
+        }
+    }
+
+    _saveDismissedMap(map) {
+        try {
+            if (this._settings) {
+                this._settings.set_string('dismissed-prs', JSON.stringify(map || {}));
+            }
+        } catch (err) {
+            console.error('[GitHub PR Tracker] Error saving dismissed-prs:', err);
+        }
+    }
+
     /**
-     * Applies repository filters and distributes PRs to categories.
+     * Dismisses a pull request until it receives a new update on GitHub.
+     * @param {PRItem} prItem
+     */
+    dismissPR(prItem) {
+        if (!prItem) return;
+        const dismissedMap = this._loadDismissedMap();
+        recordDismissal(prItem, dismissedMap);
+        this._saveDismissedMap(dismissedMap);
+        this._applyFilterAndDisplay(this._rawPRItems);
+    }
+
+    /**
+     * Restores a dismissed pull request back to its active category.
+     * @param {PRItem} prItem
+     */
+    restorePR(prItem) {
+        if (!prItem) return;
+        const dismissedMap = this._loadDismissedMap();
+        removeDismissal(prItem, dismissedMap);
+        this._saveDismissedMap(dismissedMap);
+        this._applyFilterAndDisplay(this._rawPRItems);
+    }
+
+    /**
+     * Applies repository filters, handles dismissed PRs, and distributes PRs to categories.
      * @param {Array<PRItem>} prItems
      */
     _applyFilterAndDisplay(prItems) {
         const filtered = prItems.filter(item => item && item.category && this._repoFilter.matches(item));
+        const dismissedMap = this._loadDismissedMap();
+        const { categorizedMap, mapChanged } = categorizeAndPruneDismissed(filtered, dismissedMap);
 
-        const categorizedMap = new Map();
-        for (const catId of Object.values(CATEGORIES)) {
-            categorizedMap.set(catId, []);
-        }
-
-        for (const item of filtered) {
-            const list = categorizedMap.get(item.category);
-            if (list) {
-                list.push(item);
-            }
-        }
-
-        // Sort items inside each category by updatedAt descending
-        for (const list of categorizedMap.values()) {
-            list.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+        if (mapChanged) {
+            this._saveDismissedMap(dismissedMap);
         }
 
         this._indicator.updateCounts(categorizedMap);

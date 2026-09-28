@@ -7,6 +7,7 @@ export const CATEGORIES = {
     READY_TO_MERGE: 'READY_TO_MERGE',
     WAITING_REVIEW: 'WAITING_REVIEW',
     DRAFT: 'DRAFT',
+    DISMISSED: 'DISMISSED',
 };
 
 export const CATEGORY_METADATA = {
@@ -43,6 +44,13 @@ export const CATEGORY_METADATA = {
         title: 'Draft PRs',
         symbol: '📝',
         iconName: 'document-edit-symbolic',
+        defaultExpanded: false,
+    },
+    [CATEGORIES.DISMISSED]: {
+        id: CATEGORIES.DISMISSED,
+        title: 'Dismissed',
+        symbol: '🚫',
+        iconName: 'view-conceal-symbolic',
         defaultExpanded: false,
     },
 };

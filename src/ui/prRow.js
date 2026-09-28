@@ -6,6 +6,7 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Pango from 'gi://Pango';
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 /**
@@ -59,10 +60,18 @@ function reasonToCssClass(reason) {
 
 export const PRRow = GObject.registerClass(
 class PRRow extends PopupMenu.PopupBaseMenuItem {
-    _init(prItem, params = {}) {
+    _init(prItem, options = {}, params = {}) {
         super._init(params);
         this.add_style_class_name('pr-menu-item');
         this._pr = prItem;
+        this._onDismiss = options.onDismiss || null;
+        this._onUndo = options.onUndo || null;
+        this._isDismissed = !!options.isDismissed;
+        this._isActionClick = false;
+
+        if (this._isDismissed) {
+            this.add_style_class_name('pr-menu-item-dismissed');
+        }
 
         const mainBox = new St.BoxLayout({
             vertical: true,
@@ -70,7 +79,7 @@ class PRRow extends PopupMenu.PopupBaseMenuItem {
             style_class: 'pr-item-box',
         });
 
-        // Top line: Repo name, PR number, author, relative time
+        // Top line: Repo name, PR number, author, relative time, action button
         const headerBox = new St.BoxLayout({
             vertical: false,
             x_expand: true,
@@ -105,11 +114,46 @@ class PRRow extends PopupMenu.PopupBaseMenuItem {
             y_align: Clutter.ActorAlign.CENTER,
         });
 
+        const actionIcon = new St.Icon({
+            icon_name: this._isDismissed ? 'edit-undo-symbolic' : 'window-close-symbolic',
+            icon_size: 12,
+        });
+
+        this._actionBtn = new St.Button({
+            style_class: this._isDismissed ? 'button pr-undo-btn' : 'button pr-dismiss-btn',
+            can_focus: true,
+            track_hover: true,
+            y_align: Clutter.ActorAlign.CENTER,
+            child: actionIcon,
+        });
+        this._actionBtn.accessible_name = this._isDismissed ? 'Undo dismiss' : 'Dismiss';
+
+        this._actionBtn.connect('button-press-event', () => {
+            this._isActionClick = true;
+            return Clutter.EVENT_PROPAGATE;
+        });
+
+        this._actionBtn.connect('clicked', () => {
+            this._isActionClick = true;
+            if (this._isDismissed) {
+                if (this._onUndo) {
+                    this._onUndo(this._pr);
+                }
+            } else if (this._onDismiss) {
+                this._onDismiss(this._pr);
+            }
+            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                this._isActionClick = false;
+                return GLib.SOURCE_REMOVE;
+            });
+        });
+
         headerBox.add_child(repoLabel);
         headerBox.add_child(numLabel);
         headerBox.add_child(authorLabel);
         headerBox.add_child(timeSpacer);
         headerBox.add_child(timeLabel);
+        headerBox.add_child(this._actionBtn);
 
         // Middle line: PR Title
         const titleLabel = new St.Label({
@@ -148,6 +192,20 @@ class PRRow extends PopupMenu.PopupBaseMenuItem {
         this.connect('activate', () => {
             this._openPR();
         });
+    }
+
+    activate(event) {
+        if (this._isActionClick) {
+            this._isActionClick = false;
+            return;
+        }
+        if (this._actionBtn && event && typeof event.get_source === 'function') {
+            const source = event.get_source();
+            if (source && (source === this._actionBtn || this._actionBtn.contains(source))) {
+                return;
+            }
+        }
+        super.activate(event);
     }
 
     _openPR() {
