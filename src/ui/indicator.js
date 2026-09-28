@@ -7,6 +7,7 @@ import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import { MenuView } from './menuView.js';
+import { trackStyleVariant } from './styleVariant.js';
 import { CATEGORIES } from '../models/prItem.js';
 
 export const Indicator = GObject.registerClass(
@@ -68,6 +69,10 @@ class Indicator extends PanelMenu.Button {
 
         // Build popup menu view
         this.menuView = new MenuView(this.menu, this._extension, this._onRefresh, callbacks);
+
+        // Switch to the light palette in stylesheet.css when the Shell uses a
+        // light style. The menu is not a child of the button, so tag both.
+        trackStyleVariant(this, [this, this.menu.actor]);
     }
 
     /**

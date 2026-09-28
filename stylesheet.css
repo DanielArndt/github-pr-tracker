@@ -222,3 +222,103 @@
 .pr-undo-btn:active {
     background-color: rgba(255, 255, 255, 0.25);
 }
+
+/*
+ * Light Shell style (GNOME 47+ following the system light preference).
+ * .pr-light is added to the indicator and its menu by src/ui/styleVariant.js.
+ * Text colors are darkened for contrast on the light panel and menu
+ * backgrounds; translucent white fills become translucent black.
+ */
+.pr-light .pr-panel-pill {
+    background-color: rgba(0, 0, 0, 0.08);
+    color: #2e2e33;
+}
+
+.pr-light .pr-status-item {
+    color: #9a5b00;
+}
+
+.pr-light .pr-section-count-badge {
+    background-color: rgba(0, 0, 0, 0.1);
+    color: #222226;
+}
+
+.pr-light .pr-repo-label {
+    color: #1a5fb4;
+}
+
+.pr-light .pr-number-label,
+.pr-light .pr-time-label,
+.pr-light .pr-empty-item,
+.pr-light .pr-footer-time-label {
+    color: #6b6b70;
+}
+
+.pr-light .pr-author-label {
+    color: #5e5e63;
+}
+
+.pr-light .pr-title-label {
+    color: #222226;
+}
+
+.pr-light .pr-tag-changes-requested {
+    background-color: rgba(235, 70, 70, 0.14);
+    color: #b3261e;
+}
+
+.pr-light .pr-tag-ci-failed {
+    background-color: rgba(220, 50, 50, 0.14);
+    color: #a51d2d;
+}
+
+.pr-light .pr-tag-conflict {
+    background-color: rgba(235, 130, 40, 0.14);
+    color: #a34700;
+}
+
+.pr-light .pr-tag-unresolved {
+    background-color: rgba(225, 175, 25, 0.16);
+    color: #7a5a00;
+}
+
+.pr-light .pr-tag-approved {
+    background-color: rgba(46, 185, 90, 0.14);
+    color: #1b7a3e;
+}
+
+.pr-light .pr-tag-review-requested {
+    background-color: rgba(65, 145, 235, 0.14);
+    color: #1a5fb4;
+}
+
+.pr-light .pr-tag-rereview {
+    background-color: rgba(150, 95, 230, 0.14);
+    color: #613583;
+}
+
+.pr-light .pr-tag-draft {
+    background-color: rgba(140, 140, 140, 0.14);
+    color: #4f4f54;
+}
+
+.pr-light .pr-tag-default {
+    background-color: rgba(120, 120, 120, 0.14);
+    color: #3d3d42;
+}
+
+.pr-light .pr-dismiss-btn,
+.pr-light .pr-undo-btn {
+    color: #6b6b70;
+}
+
+.pr-light .pr-dismiss-btn:hover,
+.pr-light .pr-undo-btn:hover {
+    color: #000000;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.pr-light .pr-dismiss-btn:active,
+.pr-light .pr-undo-btn:active {
+    background-color: rgba(0, 0, 0, 0.18);
+}
