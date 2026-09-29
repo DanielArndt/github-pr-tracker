@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Daniel Arndt <dan@arndt.ca>
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
@@ -9,6 +10,8 @@ import { CATEGORIES, CATEGORY_METADATA } from '../models/prItem.js';
 import { CollapsibleSection } from './collapsibleSection.js';
 import { formatRelativeTime } from '../utils/time.js';
 import { MAX_PRS_PER_LIST } from '../api/queries.js';
+
+export const GITHUB_INBOX_URL = 'https://github.com/pulls/inbox';
 
 export class MenuView {
     /**
@@ -31,11 +34,56 @@ export class MenuView {
 
     _buildUI() {
         // 1. Header / User status item
-        this._headerItem = new PopupMenu.PopupMenuItem('', {
+        this._headerItem = new PopupMenu.PopupBaseMenuItem({
             reactive: false,
+            can_focus: false,
             style_class: 'pr-user-header',
         });
-        this._headerItem.label.clutter_text.set_markup('<b>GitHub Pull Requests</b>');
+
+        const headerBox = new St.BoxLayout({
+            vertical: false,
+            style_class: 'pr-header-title-box',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+
+        this._headerTitleLabel = new St.Label({
+            style_class: 'pr-user-header-label',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        this._headerTitleLabel.clutter_text.set_markup('<b>GitHub Pull Requests</b>');
+
+        this._usernameLabel = new St.Label({
+            style_class: 'pr-user-link-label',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+
+        this._usernameBtn = new St.Button({
+            style_class: 'pr-user-link-btn',
+            can_focus: true,
+            track_hover: true,
+            y_align: Clutter.ActorAlign.CENTER,
+            child: this._usernameLabel,
+        });
+        if (typeof this._usernameBtn.set_cursor_type === 'function' && Clutter.CursorType?.POINTER !== undefined) {
+            this._usernameBtn.set_cursor_type(Clutter.CursorType.POINTER);
+        }
+        this._usernameBtn.connect('clicked', () => this._openInbox());
+        this._usernameBtn.hide();
+
+        this._headerSuffixLabel = new St.Label({
+            style_class: 'pr-user-header-label',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        this._headerSuffixLabel.clutter_text.set_markup('<b>)</b>');
+        this._headerSuffixLabel.hide();
+
+        headerBox.add_child(this._headerTitleLabel);
+        headerBox.add_child(this._usernameBtn);
+        headerBox.add_child(this._headerSuffixLabel);
+
+        this._headerItem.add_child(headerBox);
+        this._headerItem.label = this._headerTitleLabel;
+        this._headerItem.label_actor = headerBox;
         this._menu.addMenuItem(this._headerItem);
 
         // 2. Status message item (for warnings, auth setup, etc.)
@@ -194,9 +242,26 @@ export class MenuView {
         if (username) {
             // The login comes from GSettings, so escape it before using markup
             const escaped = GLib.markup_escape_text(username, -1);
-            this._headerItem.label.clutter_text.set_markup(`<b>GitHub PRs (@${escaped})</b>`);
+            this._headerTitleLabel.clutter_text.set_markup('<b>GitHub PRs (</b>');
+            this._usernameLabel.clutter_text.set_markup(`<b>@${escaped}</b>`);
+            this._usernameBtn.show();
+            this._headerSuffixLabel.show();
         } else {
-            this._headerItem.label.clutter_text.set_markup('<b>GitHub Pull Requests</b>');
+            this._headerTitleLabel.clutter_text.set_markup('<b>GitHub Pull Requests</b>');
+            this._usernameBtn.hide();
+            this._headerSuffixLabel.hide();
+        }
+    }
+
+    /**
+     * Opens the GitHub Pull Requests inbox in the default browser.
+     */
+    _openInbox() {
+        this._menu.close();
+        try {
+            Gio.AppInfo.launch_default_for_uri(GITHUB_INBOX_URL, null);
+        } catch (err) {
+            console.error(`[GitHub PR Tracker] Failed to open URL ${GITHUB_INBOX_URL}:`, err);
         }
     }
 

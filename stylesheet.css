@@ -33,6 +33,48 @@
     padding-bottom: 2px;
 }
 
+.pr-header-title-box {
+    spacing: 0;
+}
+
+.pr-user-header-label {
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.pr-user-link-btn {
+    padding: 0;
+    margin: 0;
+    border-width: 0;
+    background-color: transparent;
+    box-shadow: none;
+    color: #78a9ff;
+}
+
+.pr-user-link-btn:hover,
+.pr-user-link-btn:focus {
+    color: #a4c5ff;
+}
+
+.pr-user-link-btn:active {
+    color: #5890ff;
+}
+
+.pr-user-link-label {
+    font-size: 13px;
+    font-weight: bold;
+    color: #78a9ff;
+}
+
+.pr-user-link-btn:hover .pr-user-link-label,
+.pr-user-link-btn:focus .pr-user-link-label {
+    color: #a4c5ff;
+}
+
+.pr-user-link-btn:active .pr-user-link-label {
+    color: #5890ff;
+}
+
 .pr-status-item {
     font-size: 11px;
     color: #f6c177;
@@ -244,8 +286,25 @@
     color: #222226;
 }
 
-.pr-light .pr-repo-label {
+.pr-light .pr-repo-label,
+.pr-light .pr-user-link-label {
     color: #1a5fb4;
+}
+
+.pr-light .pr-user-link-btn {
+    color: #1a5fb4;
+}
+
+.pr-light .pr-user-link-btn:hover,
+.pr-light .pr-user-link-btn:focus,
+.pr-light .pr-user-link-btn:hover .pr-user-link-label,
+.pr-light .pr-user-link-btn:focus .pr-user-link-label {
+    color: #1c71d8;
+}
+
+.pr-light .pr-user-link-btn:active,
+.pr-light .pr-user-link-btn:active .pr-user-link-label {
+    color: #16529a;
 }
 
 .pr-light .pr-number-label,
