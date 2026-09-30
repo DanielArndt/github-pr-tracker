@@ -60,7 +60,7 @@ export class RepoFilter {
 
     /**
      * Determines whether a PR item passes the filter rules.
-     * @param {import('../models/prItem.js').PRItem} prItem
+     * @param {import('./prItem.js').PRItem} prItem
      * @returns {boolean}
      */
     matches(prItem) {

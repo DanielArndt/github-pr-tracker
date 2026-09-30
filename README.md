@@ -1,6 +1,8 @@
 # GitHub PR Tracker (GNOME Shell Extension)
 
-A GNOME Shell extension (compatible with GNOME Shell 45–50+) that tracks pull requests for your GitHub account using the GitHub GraphQL API, organizing them into clear actionable categories with precise status reason badges.
+A GNOME Shell extension (compatible with GNOME Shell 45–50+) that tracks pull requests for
+your GitHub account using the GitHub GraphQL API, organizing them into clear actionable
+categories with precise status reason badges.
 
 <p align="center">
   <img src="screenshots/menu.png" alt="GitHub PR Tracker">
@@ -27,7 +29,7 @@ A GNOME Shell extension (compatible with GNOME Shell 45–50+) that tracks pull 
   - Displays 1–2 word reason pills (e.g. `Changes Requested`, `CI Failed`, `Conflicts`, `Unresolved Comments`) with support for multiple simultaneous reasons.
   - Clicking any pull request directly opens it in your default web browser.
 - **GNOME Shell Design Compliant**:
-  - Top bar panel indicator shows compact pill badges (`⚠️ 2`, `💬 3`, `✓ 1`), with palettes for both the dark and light GNOME Shell styles.
+  - Top bar panel indicator shows compact pill badges with symbolic status icons and counts, with palettes for both the dark and light GNOME Shell styles.
   - Automatically hides badges when counts are zero, displaying only the subtle GitHub icon.
 - **Secure Credential Storage**:
   - GitHub Personal Access Tokens are stored securely in your system keyring using `libsecret` (Secret Service API), never in plain text configuration files.
@@ -40,7 +42,8 @@ A GNOME Shell extension (compatible with GNOME Shell 45–50+) that tracks pull 
 
 ### Limits
 
-- Up to 30 of your most recently updated open pull requests, and up to 30 pull requests awaiting your review, are fetched. When GitHub has more, the menu footer shows "latest 30 per list".
+- Up to 30 of your most recently updated open pull requests, and up to 30 pull requests awaiting your review,
+  are fetched. When GitHub has more, the menu footer shows "latest 30 per list".
 - Per pull request, up to 100 reviewers, reviews, review threads and status checks are considered.
 
 ---
@@ -84,9 +87,14 @@ gnome-extensions enable github-pr-tracker@dan.arndt.ca
 ## Setup & Configuration
 
 1. Generate a GitHub Personal Access Token (classic):
-   - Click **Generate Token** in the extension preferences (or go directly to [GitHub New Personal Access Token](https://github.com/settings/tokens/new?description=GitHub%20PR%20Tracker&scopes=repo)) to pre-populate the token description and required `repo` scope.
-   - **Public repositories only:** uncheck the `repo` scope if you do not track private repositories. A token with no scopes can read public data, which is all the extension needs.
-   - **Private repositories:** keep the `repo` scope selected. GitHub has no read-only equivalent for classic tokens, so this scope also grants write access. The extension only reads data and never modifies anything, but treat the token accordingly and set an expiration date.
+   - Click **Generate Token** in the extension preferences (or go directly to
+     [GitHub New Personal Access Token](https://github.com/settings/tokens/new?description=GitHub%20PR%20Tracker&scopes=repo))
+     to pre-populate the token description and required `repo` scope.
+   - **Public repositories only:** uncheck the `repo` scope if you do not track private repositories.
+     A token with no scopes can read public data, which is all the extension needs.
+   - **Private repositories:** keep the `repo` scope selected. GitHub has no read-only equivalent for classic tokens,
+     so this scope also grants write access. The extension only reads data and never modifies anything,
+     but treat the token accordingly and set an expiration date.
    - Fine-grained personal access tokens have not been tested and may not return all pull requests.
 2. Open extension preferences:
    ```bash
@@ -118,4 +126,6 @@ make clean
 
 Copyright (C) 2026 Daniel Arndt
 
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. See [LICENSE](LICENSE) for the full text.
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version 2 of
+the License, or (at your option) any later version. See [LICENSE](LICENSE) for the full text.

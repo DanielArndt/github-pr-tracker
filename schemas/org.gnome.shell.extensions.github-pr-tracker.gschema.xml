@@ -11,7 +11,10 @@
     <key name="include-repos" type="s">
       <default>""</default>
       <summary>Repositories to include</summary>
-      <description>Comma-separated list of repo names or patterns (e.g. 'canonical/*', 'user/repo'). If empty, all accessible repos are included.</description>
+      <description>
+        Comma-separated list of repo names or patterns (e.g. 'canonical/*', 'user/repo').
+        If empty, all accessible repos are included.
+      </description>
     </key>
 
     <key name="exclude-repos" type="s">
@@ -35,7 +38,9 @@
     <key name="include-team-reviews" type="b">
       <default>false</default>
       <summary>Include team review requests</summary>
-      <description>Whether to include pull requests where review was requested from a team rather than directly from you.</description>
+      <description>
+        Whether to include pull requests where review was requested from a team rather than directly from you.
+      </description>
     </key>
 
     <key name="last-username" type="s">
@@ -53,7 +58,11 @@
     <key name="token-changed" type="x">
       <default>0</default>
       <summary>Access token change marker</summary>
-      <description>Updated by Preferences whenever the access token is saved or cleared, so the running extension refreshes immediately. Contains a timestamp only, never the token itself.</description>
+      <description>
+        Updated by Preferences whenever the access token is saved or cleared,
+        so the running extension refreshes immediately. Contains a timestamp
+        only, never the token itself.
+      </description>
     </key>
   </schema>
 </schemalist>

@@ -8,7 +8,7 @@ import { Indicator } from './src/ui/indicator.js';
 import { GithubClient, RequestCancelledError } from './src/api/githubClient.js';
 import { loadToken } from './src/api/keyring.js';
 import { syncClientToken, TOKEN_CHANGED_KEY } from './src/api/tokenSync.js';
-import { RepoFilter } from './src/ui/repoFilter.js';
+import { RepoFilter } from './src/models/repoFilter.js';
 import { PRItem } from './src/models/prItem.js';
 import { collectPRNodes } from './src/models/prNodes.js';
 import {
@@ -26,7 +26,6 @@ export default class GitHubPRExtension extends Extension {
         this._rawPRItems = [];
         this._viewerLogin = this._settings.get_string('last-username') || '';
 
-        // Configure Repo Filter
         this._repoFilter = new RepoFilter({
             includeStr: this._settings.get_string('include-repos'),
             excludeStr: this._settings.get_string('exclude-repos'),
@@ -34,10 +33,8 @@ export default class GitHubPRExtension extends Extension {
             ignoreForks: this._settings.get_boolean('ignore-forks'),
         });
 
-        // Initialize API client
         this._githubClient = new GithubClient();
 
-        // Initialize Indicator in GNOME top panel
         this._indicator = new Indicator(
             this,
             () => this.refreshData(),
@@ -52,7 +49,6 @@ export default class GitHubPRExtension extends Extension {
             this._indicator.menuView.setUsername(this._viewerLogin);
         }
 
-        // Connect settings change listeners
         this._settingsChangedIds = [
             this._settings.connect('changed::refresh-interval', () => this._startTimer()),
             this._settings.connect('changed::include-repos', () => this._onFilterSettingsChanged()),
@@ -67,6 +63,39 @@ export default class GitHubPRExtension extends Extension {
         // if the extension is disabled while the first refresh is pending.
         this._startTimer();
         this.refreshData();
+    }
+
+    disable() {
+        if (this._timerId) {
+            GLib.Source.remove(this._timerId);
+            this._timerId = null;
+        }
+
+        // Drop results of any refresh still in flight; destroying the client
+        // below rejects its pending request.
+        this._bumpRefreshGeneration();
+
+        if (this._settingsChangedIds && this._settings) {
+            for (const id of this._settingsChangedIds) {
+                this._settings.disconnect(id);
+            }
+            this._settingsChangedIds = [];
+        }
+
+        if (this._githubClient) {
+            this._githubClient.destroy();
+            this._githubClient = null;
+        }
+
+        if (this._indicator) {
+            this._indicator.destroy();
+            this._indicator = null;
+        }
+
+        this._settings = null;
+        this._repoFilter = null;
+        this._rawNodes = [];
+        this._rawPRItems = [];
     }
 
     /**
@@ -98,7 +127,10 @@ export default class GitHubPRExtension extends Extension {
     }
 
     _startTimer() {
-        this._stopTimer();
+        if (this._timerId) {
+            GLib.Source.remove(this._timerId);
+            this._timerId = null;
+        }
         const intervalMinutes = Math.max(1, this._settings.get_int('refresh-interval') || 5);
         this._timerId = GLib.timeout_add_seconds(
             GLib.PRIORITY_DEFAULT,
@@ -108,13 +140,6 @@ export default class GitHubPRExtension extends Extension {
                 return GLib.SOURCE_CONTINUE;
             }
         );
-    }
-
-    _stopTimer() {
-        if (this._timerId) {
-            GLib.Source.remove(this._timerId);
-            this._timerId = null;
-        }
     }
 
     /**
@@ -222,12 +247,8 @@ export default class GitHubPRExtension extends Extension {
     }
 
     _saveDismissedMap(map) {
-        try {
-            if (this._settings) {
-                this._settings.set_string('dismissed-prs', JSON.stringify(map || {}));
-            }
-        } catch (err) {
-            console.error('[GitHub PR Tracker] Error saving dismissed-prs:', err);
+        if (this._settings) {
+            this._settings.set_string('dismissed-prs', JSON.stringify(map || {}));
         }
     }
 
@@ -269,35 +290,5 @@ export default class GitHubPRExtension extends Extension {
         }
 
         this._indicator.updateCounts(categorizedMap);
-    }
-
-    disable() {
-        this._stopTimer();
-
-        // Drop results of any refresh still in flight; destroying the client
-        // below rejects its pending request.
-        this._bumpRefreshGeneration();
-
-        if (this._settingsChangedIds && this._settings) {
-            for (const id of this._settingsChangedIds) {
-                this._settings.disconnect(id);
-            }
-            this._settingsChangedIds = [];
-        }
-
-        if (this._githubClient) {
-            this._githubClient.destroy();
-            this._githubClient = null;
-        }
-
-        if (this._indicator) {
-            this._indicator.destroy();
-            this._indicator = null;
-        }
-
-        this._settings = null;
-        this._repoFilter = null;
-        this._rawNodes = [];
-        this._rawPRItems = [];
     }
 }

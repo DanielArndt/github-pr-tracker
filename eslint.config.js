@@ -42,6 +42,7 @@ export default [
             }],
             'no-var': 'error',
             'prefer-const': 'error',
+            'max-len': ['error', 200],
         },
     },
 ];

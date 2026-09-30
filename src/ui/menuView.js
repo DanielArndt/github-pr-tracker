@@ -64,9 +64,7 @@ export class MenuView {
             y_align: Clutter.ActorAlign.CENTER,
             child: this._usernameLabel,
         });
-        if (typeof this._usernameBtn.set_cursor_type === 'function' && Clutter.CursorType?.POINTER !== undefined) {
-            this._usernameBtn.set_cursor_type(Clutter.CursorType.POINTER);
-        }
+        this._usernameBtn.set_cursor_type(Clutter.CursorType.POINTER);
         this._usernameBtn.connect('clicked', () => this._openInbox());
         this._usernameBtn.hide();
 
@@ -90,6 +88,13 @@ export class MenuView {
         this._statusItem = new PopupMenu.PopupMenuItem('Configuring...', {
             style_class: 'pr-status-item',
         });
+        this._statusIcon = new St.Icon({
+            icon_name: 'dialog-information-symbolic',
+            icon_size: 14,
+            style_class: 'system-status-icon pr-status-icon',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        this._statusItem.insert_child_at_index(this._statusIcon, 0);
         this._statusItem.connect('activate', () => {
             this._menu.close();
             this._extension.openPreferences();
@@ -202,7 +207,8 @@ export class MenuView {
      * Shows prompt when no token is configured.
      */
     showTokenRequired() {
-        this._statusItem.label.text = '⚠️ Click to set GitHub Access Token in Settings';
+        this._statusIcon.icon_name = 'dialog-warning-symbolic';
+        this._statusItem.label.text = 'Click to set GitHub Access Token in Settings';
         this._statusItem.actor.show();
         for (const section of this._sections.values()) {
             section.clear();
@@ -215,7 +221,8 @@ export class MenuView {
      */
     showError(errorText) {
         this._hasError = true;
-        this._statusItem.label.text = `⚠️ ${errorText}`;
+        this._statusIcon.icon_name = 'dialog-warning-symbolic';
+        this._statusItem.label.text = errorText;
         this._statusItem.actor.show();
     }
 
@@ -227,6 +234,7 @@ export class MenuView {
         this._refreshBtn.reactive = !isLoading;
         if (isLoading) {
             this._hasError = false;
+            this._statusIcon.icon_name = 'view-refresh-symbolic';
             this._statusItem.label.text = 'Fetching pull requests...';
             this._statusItem.actor.show();
         } else if (!this._hasError) {
@@ -304,8 +312,23 @@ export class MenuView {
             this._menuOpenStateId = null;
         }
         for (const section of this._sections.values()) {
-            section.clear();
+            section.destroy();
         }
         this._sections.clear();
+        this._headerItem = null;
+        this._headerTitleLabel = null;
+        this._usernameLabel = null;
+        this._usernameBtn = null;
+        this._headerSuffixLabel = null;
+        this._statusIcon = null;
+        this._statusItem = null;
+        this._footerItem = null;
+        this._timeLabel = null;
+        this._refreshBtn = null;
+        this._prefsBtn = null;
+        this._menu = null;
+        this._extension = null;
+        this._onRefresh = null;
+        this._callbacks = null;
     }
 }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { PRItem, CATEGORIES, CATEGORY_METADATA } from '../src/models/prItem.js';
-import { RepoFilter } from '../src/ui/repoFilter.js';
+import { RepoFilter } from '../src/models/repoFilter.js';
 
 let passed = 0;
 let failed = 0;

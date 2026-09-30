@@ -125,21 +125,15 @@ class PRRow extends PopupMenu.PopupBaseMenuItem {
             // Reset once the current click has finished propagating. Dismiss
             // and undo usually rebuild the list and destroy this row first,
             // so the source is tracked and removed on destroy.
-            if (!this._resetActionClickId) {
-                this._resetActionClickId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                    this._resetActionClickId = 0;
-        this._isActionClick = false;
-        this._resetActionClickId = 0;
-
-        this.connect('destroy', () => {
             if (this._resetActionClickId) {
                 GLib.Source.remove(this._resetActionClickId);
                 this._resetActionClickId = 0;
             }
-        });
-                    return GLib.SOURCE_REMOVE;
-                });
-            }
+            this._resetActionClickId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                this._isActionClick = false;
+                this._resetActionClickId = 0;
+                return GLib.SOURCE_REMOVE;
+            });
         });
 
         headerBox.add_child(repoLabel);
@@ -193,7 +187,7 @@ class PRRow extends PopupMenu.PopupBaseMenuItem {
             this._isActionClick = false;
             return;
         }
-        if (this._actionBtn && event && typeof event.get_source === 'function') {
+        if (this._actionBtn && event) {
             const source = event.get_source();
             if (source && (source === this._actionBtn || this._actionBtn.contains(source))) {
                 return;
@@ -209,5 +203,17 @@ class PRRow extends PopupMenu.PopupBaseMenuItem {
         } catch (err) {
             console.error(`[GitHub PR Tracker] Failed to open URL ${this._pr.url}:`, err);
         }
+    }
+
+    destroy() {
+        if (this._resetActionClickId) {
+            GLib.Source.remove(this._resetActionClickId);
+            this._resetActionClickId = 0;
+        }
+        this._actionBtn = null;
+        this._pr = null;
+        this._onDismiss = null;
+        this._onUndo = null;
+        super.destroy();
     }
 });

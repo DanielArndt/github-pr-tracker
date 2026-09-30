@@ -129,4 +129,12 @@ class CollapsibleSection extends PopupMenu.PopupSubMenuMenuItem {
 
         this._syncOpenState();
     }
+
+    destroy() {
+        this.clear();
+        this._countBadge = null;
+        this._onDismiss = null;
+        this._onUndo = null;
+        super.destroy();
+    }
 });

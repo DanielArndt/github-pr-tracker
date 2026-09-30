@@ -47,16 +47,28 @@ class Indicator extends PanelMenu.Button {
             y_align: Clutter.ActorAlign.CENTER,
         });
 
-        // One pill per panel category, e.g. "⚠️ 2", hidden while the count is zero
+        // One pill per panel category, hidden while the count is zero
         this._badges = new Map();
         for (const catId of PANEL_BADGE_CATEGORIES) {
-            const badge = new St.Label({
+            const pill = new St.BoxLayout({
+                vertical: false,
                 style_class: 'pr-panel-pill',
                 y_align: Clutter.ActorAlign.CENTER,
             });
-            badge.hide();
-            this._badgeBox.add_child(badge);
-            this._badges.set(catId, badge);
+            const icon = new St.Icon({
+                icon_name: CATEGORY_METADATA[catId].iconName,
+                style_class: 'system-status-icon pr-panel-pill-icon',
+                y_align: Clutter.ActorAlign.CENTER,
+            });
+            const label = new St.Label({
+                style_class: 'pr-panel-pill-label',
+                y_align: Clutter.ActorAlign.CENTER,
+            });
+            pill.add_child(icon);
+            pill.add_child(label);
+            pill.hide();
+            this._badgeBox.add_child(pill);
+            this._badges.set(catId, { pill, label });
         }
 
         box.add_child(this._badgeBox);
@@ -77,13 +89,13 @@ class Indicator extends PanelMenu.Button {
      * @param {Map<string, Array<any>>} categorizedPRs
      */
     updateCounts(categorizedPRs) {
-        for (const [catId, badge] of this._badges) {
+        for (const [catId, { pill, label }] of this._badges) {
             const count = (categorizedPRs.get(catId) || []).length;
             if (count > 0) {
-                badge.text = `${CATEGORY_METADATA[catId].symbol} ${count}`;
-                badge.show();
+                label.text = `${count}`;
+                pill.show();
             } else {
-                badge.hide();
+                pill.hide();
             }
         }
 
@@ -96,6 +108,14 @@ class Indicator extends PanelMenu.Button {
             this.menuView.destroy();
             this.menuView = null;
         }
+        if (this._badges) {
+            this._badges.clear();
+            this._badges = null;
+        }
+        this._badgeBox = null;
+        this._icon = null;
+        this._extension = null;
+        this._onRefresh = null;
         super.destroy();
     }
 });

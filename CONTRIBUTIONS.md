@@ -6,7 +6,8 @@ Thank you for your interest in contributing to GitHub PR Tracker! We welcome con
 
 ## Commit Message Guidelines
 
-This project strictly follows the **[Conventional Commits](https://www.conventionalcommits.org/)** specification (v1.0.0). All commit messages—whether authored by human contributors or automated agents—must adhere to this format.
+This project strictly follows the **[Conventional Commits](https://www.conventionalcommits.org/)** specification (v1.0.0).
+All commit messages—whether authored by human contributors or automated agents—must adhere to this format.
 
 ### Commit Format
 

@@ -63,8 +63,13 @@ export default class GitHubPRExtensionPreferences extends ExtensionPreferences {
         const statusRow = new Adw.ActionRow({
             title: 'Connection Status',
             subtitle: 'Checking keyring...',
+            icon_name: 'dialog-information-symbolic',
             // Subtitle shows GitHub display names and error messages verbatim
             use_markup: false,
+        });
+
+        window.connect('close-request', () => {
+            client.destroy();
         });
 
         const testBtn = new Gtk.Button({
@@ -101,35 +106,43 @@ export default class GitHubPRExtensionPreferences extends ExtensionPreferences {
         loadToken().then(token => {
             if (token) {
                 tokenRow.set_text(token);
+                statusRow.set_icon_name('dialog-information-symbolic');
                 statusRow.set_subtitle('Token loaded from keyring. Click "Test Connection" to verify.');
             } else {
+                statusRow.set_icon_name('dialog-warning-symbolic');
                 statusRow.set_subtitle('No token saved. Please enter a Personal Access Token.');
             }
         }).catch(err => {
+            statusRow.set_icon_name('dialog-error-symbolic');
             statusRow.set_subtitle(`Keyring error: ${err.message}`);
         });
 
         // Test connection helper
         const verifyCurrentToken = async (token) => {
             if (!token || token.trim().length === 0) {
+                statusRow.set_icon_name('dialog-warning-symbolic');
                 statusRow.set_subtitle('Please enter a valid token first.');
                 return;
             }
+            statusRow.set_icon_name('dialog-information-symbolic');
             statusRow.set_subtitle('Verifying token with GitHub API...');
             testBtn.set_sensitive(false);
             try {
                 const user = await client.verifyToken(token);
                 if (user && user.login) {
                     const nameStr = user.name ? ` (${user.name})` : '';
-                    statusRow.set_subtitle(`✓ Connected as @${user.login}${nameStr}`);
+                    statusRow.set_icon_name('emblem-ok-symbolic');
+                    statusRow.set_subtitle(`Connected as @${user.login}${nameStr}`);
                     settings.set_string('last-username', user.login);
                 } else {
+                    statusRow.set_icon_name('dialog-warning-symbolic');
                     statusRow.set_subtitle('Connected, but could not determine user login.');
                 }
             } catch (err) {
                 // Superseded by a newer verification, which will set the status.
                 if (err instanceof RequestCancelledError) return;
-                statusRow.set_subtitle(`⚠️ Error: ${err.message}`);
+                statusRow.set_icon_name('dialog-error-symbolic');
+                statusRow.set_subtitle(`Error: ${err.message}`);
             } finally {
                 testBtn.set_sensitive(true);
             }
@@ -138,6 +151,7 @@ export default class GitHubPRExtensionPreferences extends ExtensionPreferences {
         saveBtn.connect('clicked', async () => {
             const token = tokenRow.get_text().trim();
             if (!token) {
+                statusRow.set_icon_name('dialog-warning-symbolic');
                 statusRow.set_subtitle('Token cannot be empty.');
                 return;
             }
@@ -147,6 +161,7 @@ export default class GitHubPRExtensionPreferences extends ExtensionPreferences {
                 notifyTokenChanged(settings);
                 await verifyCurrentToken(token);
             } catch (err) {
+                statusRow.set_icon_name('dialog-error-symbolic');
                 statusRow.set_subtitle(`Failed to store token: ${err.message}`);
             } finally {
                 saveBtn.set_sensitive(true);
@@ -159,8 +174,10 @@ export default class GitHubPRExtensionPreferences extends ExtensionPreferences {
                 await deleteToken();
                 notifyTokenChanged(settings);
                 tokenRow.set_text('');
+                statusRow.set_icon_name('dialog-information-symbolic');
                 statusRow.set_subtitle('Token removed from keyring.');
             } catch (err) {
+                statusRow.set_icon_name('dialog-error-symbolic');
                 statusRow.set_subtitle(`Failed to clear token: ${err.message}`);
             } finally {
                 clearBtn.set_sensitive(true);
