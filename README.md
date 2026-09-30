@@ -120,6 +120,8 @@ Clean build artifacts:
 make clean
 ```
 
+For guidelines on coding style, Conventional Commits, and GNOME Extension Best Practices, see [CONTRIBUTIONS.md](CONTRIBUTIONS.md).
+
 ---
 
 ## License
