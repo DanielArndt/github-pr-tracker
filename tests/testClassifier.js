@@ -89,6 +89,10 @@ function statusContext(context, state) {
     return { __typename: 'StatusContext', context, state };
 }
 
+function checkSuite(conclusion, status = 'COMPLETED') {
+    return { status, conclusion };
+}
+
 function withChecks({ rollupState, contexts, required = null, mergeStateStatus, ...rest }) {
     return makePR({
         statusCheckRollup: { state: rollupState, contexts: { nodes: contexts } },
@@ -233,6 +237,78 @@ function withChecks({ rollupState, contexts, required = null, mergeStateStatus, 
         contexts: [null, checkRun('unit-tests', 'FAILURE')],
     }), viewerLogin);
     assert(pr.reasons.includes('CI Failed'), 'Null check nodes do not break classification');
+}
+
+// 4h. Approved but workflow awaiting approval (checkSuite has ACTION_REQUIRED, rollup is null)
+{
+    const pr = new PRItem(makePR({
+        reviewDecision: 'APPROVED',
+        statusCheckRollup: null,
+        mergeStateStatus: 'UNSTABLE',
+        commits: {
+            nodes: [{
+                commit: {
+                    checkSuites: {
+                        nodes: [checkSuite('ACTION_REQUIRED')],
+                    },
+                },
+            }],
+        },
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.WAITING_REVIEW, 'Approved PR awaiting workflow approval is WAITING_REVIEW');
+    assert(pr.reasons.includes('Awaiting Workflow Approval'), 'Reason includes Awaiting Workflow Approval');
+    assert(pr.reasons.includes('Approved'), 'Reason includes Approved');
+}
+
+// 4i. Approved but check run awaiting approval (conclusion: ACTION_REQUIRED)
+{
+    const pr = new PRItem(withChecks({
+        rollupState: 'PENDING',
+        mergeStateStatus: 'BLOCKED',
+        reviewDecision: 'APPROVED',
+        contexts: [checkRun('e2e-tests', 'ACTION_REQUIRED')],
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.WAITING_REVIEW, 'Check run with ACTION_REQUIRED keeps PR out of READY_TO_MERGE');
+    assert(pr.reasons.includes('Awaiting Workflow Approval'), 'Reason includes Awaiting Workflow Approval');
+}
+
+// 4j. Unapproved PR awaiting workflow approval
+{
+    const pr = new PRItem(makePR({
+        reviewDecision: null,
+        statusCheckRollup: null,
+        mergeStateStatus: 'UNSTABLE',
+        commits: {
+            nodes: [{
+                commit: {
+                    checkSuites: {
+                        nodes: [checkSuite('ACTION_REQUIRED')],
+                    },
+                },
+            }],
+        },
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.WAITING_REVIEW, 'Unapproved PR awaiting workflow approval is WAITING_REVIEW');
+    assertEqual(pr.reasons, ['Awaiting Review', 'Awaiting Workflow Approval'], 'Reasons include Awaiting Review and Awaiting Workflow Approval');
+}
+
+// 4k. Approved PR with null statusCheckRollup but pending check suites
+{
+    const pr = new PRItem(makePR({
+        reviewDecision: 'APPROVED',
+        statusCheckRollup: null,
+        mergeStateStatus: 'UNSTABLE',
+        commits: {
+            nodes: [{
+                commit: {
+                    checkSuites: {
+                        nodes: [checkSuite(null, 'QUEUED')],
+                    },
+                },
+            }],
+        },
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.WAITING_REVIEW, 'PR with queued check suites and null rollup is not READY_TO_MERGE');
 }
 
 // 5. Action Required: Merge Conflicts

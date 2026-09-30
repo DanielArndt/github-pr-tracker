@@ -102,16 +102,35 @@ function isContextPassing(ctx) {
 /**
  * Extracts the status check data used by the classifier.
  * @param {Object} rawNode
- * @returns {{rollup: Object|null, contexts: Array<Object>, required: Array<string>}}
+ * @returns {{rollup: Object|null, checkSuites: Array<Object>, contexts: Array<Object>, required: Array<string>}}
  */
 function getCheckData(rawNode) {
     const rollup = rawNode?.statusCheckRollup || null;
+    const commitNode = rawNode?.commits?.nodes?.[0]?.commit;
+    const checkSuites = (commitNode?.checkSuites?.nodes || []).filter(Boolean);
     return {
         rollup,
+        checkSuites,
         // Nodes can be null in partial GraphQL responses
         contexts: (rollup?.contexts?.nodes || []).filter(Boolean),
         required: rawNode?.baseRef?.branchProtectionRule?.requiredStatusCheckContexts || [],
     };
+}
+
+/**
+ * Checks if any check suite or check run requires manual workflow approval.
+ * @param {Object} rawNode
+ * @returns {boolean}
+ */
+function isAwaitingWorkflowApproval(rawNode) {
+    const { checkSuites, contexts } = getCheckData(rawNode);
+    const hasAwaitingSuite = checkSuites.some(
+        s => s.conclusion === 'ACTION_REQUIRED' || s.status === 'WAITING'
+    );
+    const hasAwaitingContext = contexts.some(
+        ctx => ctx.__typename === 'CheckRun' && (ctx.conclusion === 'ACTION_REQUIRED' || ctx.status === 'WAITING')
+    );
+    return hasAwaitingSuite || hasAwaitingContext;
 }
 
 /**
@@ -143,8 +162,15 @@ function hasFailingRequiredChecks(rawNode) {
  * @returns {boolean}
  */
 function areRequiredChecksPassing(rawNode) {
-    const { rollup, contexts, required } = getCheckData(rawNode);
+    if (isAwaitingWorkflowApproval(rawNode)) {
+        return false;
+    }
+
+    const { rollup, checkSuites, contexts, required } = getCheckData(rawNode);
     if (!rollup || rollup.state === 'SUCCESS') {
+        if (!rollup && checkSuites.length > 0) {
+            return false;
+        }
         return true;
     }
 
@@ -261,7 +287,18 @@ export class PRItem {
             }
 
             // F. Waiting on Review
-            this.reasons = ['Awaiting Review'];
+            const waitingReasons = [];
+            if (isApproved) {
+                waitingReasons.push('Approved');
+            } else {
+                waitingReasons.push('Awaiting Review');
+            }
+
+            if (isAwaitingWorkflowApproval(rawNode)) {
+                waitingReasons.push('Awaiting Workflow Approval');
+            }
+
+            this.reasons = waitingReasons;
             return CATEGORIES.WAITING_REVIEW;
         }
 

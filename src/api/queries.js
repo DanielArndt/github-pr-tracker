@@ -49,6 +49,18 @@ fragment AuthoredPRDetails on PullRequest {
       isResolved
     }
   }
+  commits(last: 1) {
+    nodes {
+      commit {
+        checkSuites(first: 50) {
+          nodes {
+            status
+            conclusion
+          }
+        }
+      }
+    }
+  }
   statusCheckRollup {
     state
     contexts(first: 100) {
