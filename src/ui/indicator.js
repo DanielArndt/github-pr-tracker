@@ -57,7 +57,7 @@ class Indicator extends PanelMenu.Button {
             });
             const icon = new St.Icon({
                 icon_name: CATEGORY_METADATA[catId].iconName,
-                style_class: 'system-status-icon pr-panel-pill-icon',
+                style_class: 'pr-panel-pill-icon',
                 y_align: Clutter.ActorAlign.CENTER,
             });
             const label = new St.Label({

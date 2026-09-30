@@ -27,6 +27,8 @@
 
 .pr-panel-pill-icon {
     icon-size: 11px;
+    margin: 0;
+    padding: 0;
 }
 
 .pr-panel-pill-label {
