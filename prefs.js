@@ -9,6 +9,9 @@ import * as keyring from './src/api/keyring.js';
 import { notifyTokenChanged } from './src/api/tokenSync.js';
 import { GithubClient, RequestCancelledError } from './src/api/githubClient.js';
 
+export const GITHUB_NEW_TOKEN_URL =
+    'https://github.com/settings/tokens/new?description=GitHub%20PR%20Tracker&scopes=repo';
+
 export default class GitHubPRExtensionPreferences extends ExtensionPreferences {
     /**
      * Token storage used by the window; tests replace this to avoid touching
@@ -70,6 +73,29 @@ export default class GitHubPRExtensionPreferences extends ExtensionPreferences {
         });
         statusRow.add_suffix(testBtn);
         authGroup.add(statusRow);
+
+        const generateTokenRow = new Adw.ActionRow({
+            title: 'Generate Token',
+            subtitle: 'Open GitHub to create a classic token with required scopes pre-populated',
+            activatable: true,
+        });
+
+        const linkBtn = new Gtk.LinkButton({
+            uri: GITHUB_NEW_TOKEN_URL,
+            icon_name: 'adw-external-link-symbolic',
+            valign: Gtk.Align.CENTER,
+            focusable: false,
+        });
+        generateTokenRow.add_suffix(linkBtn);
+
+        generateTokenRow.connect('activated', () => {
+            try {
+                Gio.AppInfo.launch_default_for_uri(GITHUB_NEW_TOKEN_URL, null);
+            } catch (err) {
+                console.error(`Failed to open token URL: ${err.message}`);
+            }
+        });
+        authGroup.add(generateTokenRow);
 
         // Load token from keyring on open
         loadToken().then(token => {
