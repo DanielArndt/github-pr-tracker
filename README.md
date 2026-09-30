@@ -2,6 +2,10 @@
 
 A GNOME Shell extension (compatible with GNOME Shell 45–50+) that tracks pull requests for your GitHub account using the GitHub GraphQL API, organizing them into clear actionable categories with precise status reason badges.
 
+<p align="center">
+  <img src="screenshots/menu.png" alt="GitHub PR Tracker">
+</p>
+
 ---
 
 ## Features
