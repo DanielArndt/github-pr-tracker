@@ -46,13 +46,18 @@ class PRRow extends PopupMenu.PopupBaseMenuItem {
         super._init(params);
         this.add_style_class_name('pr-menu-item');
         this._pr = prItem;
+        this._onSnooze = options.onSnooze || null;
         this._onDismiss = options.onDismiss || null;
-        this._onUndo = options.onUndo || null;
+        this._onUndo = options.onUndo || options.onRestore || null;
+        this._onRestore = options.onRestore || options.onUndo || null;
         this._isDismissed = !!options.isDismissed;
+        this._isSnoozed = !!options.isSnoozed;
         this._isActionClick = false;
 
         if (this._isDismissed) {
             this.add_style_class_name('pr-menu-item-dismissed');
+        } else if (this._isSnoozed) {
+            this.add_style_class_name('pr-menu-item-snoozed');
         }
 
         const mainBox = new St.BoxLayout({
@@ -61,7 +66,7 @@ class PRRow extends PopupMenu.PopupBaseMenuItem {
             style_class: 'pr-item-box',
         });
 
-        // Top line: Repo name, PR number, author, relative time, action button
+        // Top line: Repo name, PR number, author, relative time, action buttons
         const headerBox = new St.BoxLayout({
             vertical: false,
             x_expand: true,
@@ -96,54 +101,84 @@ class PRRow extends PopupMenu.PopupBaseMenuItem {
             y_align: Clutter.ActorAlign.CENTER,
         });
 
-        const actionIcon = new St.Icon({
-            icon_name: this._isDismissed ? 'edit-undo-symbolic' : 'window-close-symbolic',
-            icon_size: 12,
-        });
-
-        this._actionBtn = new St.Button({
-            style_class: this._isDismissed ? 'button pr-undo-btn' : 'button pr-dismiss-btn',
-            can_focus: true,
-            track_hover: true,
-            y_align: Clutter.ActorAlign.CENTER,
-            child: actionIcon,
-        });
-        this._actionBtn.accessible_name = this._isDismissed ? 'Undo dismiss' : 'Dismiss';
-
-        this._actionBtn.connect('button-press-event', () => {
-            this._isActionClick = true;
-            return Clutter.EVENT_PROPAGATE;
-        });
-
-        this._actionBtn.connect('clicked', () => {
-            this._isActionClick = true;
-            if (this._isDismissed) {
-                if (this._onUndo) {
-                    this._onUndo(this._pr);
-                }
-            } else if (this._onDismiss) {
-                this._onDismiss(this._pr);
-            }
-            // Reset once the current click has finished propagating. Dismiss
-            // and undo usually rebuild the list and destroy this row first,
-            // so the source is tracked and removed on destroy.
-            if (this._resetActionClickId) {
-                GLib.Source.remove(this._resetActionClickId);
-                this._resetActionClickId = 0;
-            }
-            this._resetActionClickId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                this._isActionClick = false;
-                this._resetActionClickId = 0;
-                return GLib.SOURCE_REMOVE;
+        const makeActionBtn = (iconName, styleClass, accessibleName, onClick) => {
+            const icon = new St.Icon({
+                icon_name: iconName,
+                icon_size: 12,
             });
-        });
+            const btn = new St.Button({
+                style_class: styleClass,
+                can_focus: true,
+                track_hover: true,
+                y_align: Clutter.ActorAlign.CENTER,
+                child: icon,
+            });
+            btn.accessible_name = accessibleName;
+
+            btn.connect('button-press-event', () => {
+                this._isActionClick = true;
+                return Clutter.EVENT_PROPAGATE;
+            });
+
+            btn.connect('clicked', () => {
+                this._isActionClick = true;
+                if (onClick) {
+                    onClick(this._pr);
+                }
+                if (this._resetActionClickId) {
+                    GLib.Source.remove(this._resetActionClickId);
+                    this._resetActionClickId = 0;
+                }
+                this._resetActionClickId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                    this._isActionClick = false;
+                    this._resetActionClickId = 0;
+                    return GLib.SOURCE_REMOVE;
+                });
+            });
+
+            return btn;
+        };
 
         headerBox.add_child(repoLabel);
         headerBox.add_child(numLabel);
         headerBox.add_child(authorLabel);
         headerBox.add_child(timeSpacer);
         headerBox.add_child(timeLabel);
-        headerBox.add_child(this._actionBtn);
+
+        if (this._isDismissed) {
+            this._undoBtn = makeActionBtn('edit-undo-symbolic', 'button pr-undo-btn', 'Undo dismiss', (pr) => {
+                if (this._onRestore) {
+                    this._onRestore(pr);
+                }
+            });
+            headerBox.add_child(this._undoBtn);
+        } else if (this._isSnoozed) {
+            this._undoBtn = makeActionBtn('edit-undo-symbolic', 'button pr-undo-btn', 'Undo snooze', (pr) => {
+                if (this._onRestore) {
+                    this._onRestore(pr);
+                }
+            });
+            this._dismissBtn = makeActionBtn('window-close-symbolic', 'button pr-dismiss-btn', 'Dismiss', (pr) => {
+                if (this._onDismiss) {
+                    this._onDismiss(pr);
+                }
+            });
+            headerBox.add_child(this._undoBtn);
+            headerBox.add_child(this._dismissBtn);
+        } else {
+            this._snoozeBtn = makeActionBtn('alarm-symbolic', 'button pr-snooze-btn', 'Snooze', (pr) => {
+                if (this._onSnooze) {
+                    this._onSnooze(pr);
+                }
+            });
+            this._dismissBtn = makeActionBtn('window-close-symbolic', 'button pr-dismiss-btn', 'Dismiss', (pr) => {
+                if (this._onDismiss) {
+                    this._onDismiss(pr);
+                }
+            });
+            headerBox.add_child(this._snoozeBtn);
+            headerBox.add_child(this._dismissBtn);
+        }
 
         // Middle line: PR Title
         const titleLabel = new St.Label({
@@ -189,10 +224,15 @@ class PRRow extends PopupMenu.PopupBaseMenuItem {
             this._isActionClick = false;
             return;
         }
-        if (this._actionBtn && event) {
+        if (event) {
             const source = event.get_source();
-            if (source && (source === this._actionBtn || this._actionBtn.contains(source))) {
-                return;
+            if (source) {
+                const actionBtns = [this._snoozeBtn, this._dismissBtn, this._undoBtn].filter(Boolean);
+                for (const btn of actionBtns) {
+                    if (source === btn || btn.contains(source)) {
+                        return;
+                    }
+                }
             }
         }
         super.activate(event);
@@ -212,10 +252,14 @@ class PRRow extends PopupMenu.PopupBaseMenuItem {
             GLib.Source.remove(this._resetActionClickId);
             this._resetActionClickId = 0;
         }
-        this._actionBtn = null;
+        this._snoozeBtn = null;
+        this._dismissBtn = null;
+        this._undoBtn = null;
         this._pr = null;
+        this._onSnooze = null;
         this._onDismiss = null;
         this._onUndo = null;
+        this._onRestore = null;
         super.destroy();
     }
 });

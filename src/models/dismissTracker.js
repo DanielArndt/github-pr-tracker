@@ -14,48 +14,86 @@ export function getPRKey(prItem) {
 }
 
 /**
- * Checks whether a PR is dismissed and has not had any subsequent updates.
+ * Checks whether a PR is snoozed and has not had any subsequent updates.
  * @param {import('./prItem.js').PRItem} prItem
- * @param {Record<string, string>} dismissedMap
+ * @param {Record<string, string>} snoozedMap
  * @returns {boolean}
  */
-export function isPRDismissed(prItem, dismissedMap) {
-    if (!prItem || !dismissedMap) return false;
+export function isPRSnoozed(prItem, snoozedMap) {
+    if (!prItem || !snoozedMap) return false;
     const key = getPRKey(prItem);
-    const dismissedAtStr = dismissedMap[key];
-    if (!dismissedAtStr) return false;
+    const snoozedAtStr = snoozedMap[key];
+    if (!snoozedAtStr) return false;
 
-    const dismissedAt = new Date(dismissedAtStr).getTime();
+    const snoozedAt = new Date(snoozedAtStr).getTime();
     const prUpdatedAt = prItem.updatedAt instanceof Date
         ? prItem.updatedAt.getTime()
         : new Date(prItem.updatedAt).getTime();
 
-    // The PR remains dismissed only while its updatedAt is <= the dismissal timestamp
-    return prUpdatedAt <= dismissedAt;
+    // The PR remains snoozed only while its updatedAt is <= the snooze timestamp
+    return prUpdatedAt <= snoozedAt;
 }
 
 /**
- * Marks a PR as dismissed at its current updatedAt timestamp.
+ * Marks a PR as snoozed at its current updatedAt timestamp.
  * @param {import('./prItem.js').PRItem} prItem
- * @param {Record<string, string>} dismissedMap
+ * @param {Record<string, string>} snoozedMap
  * @returns {Record<string, string>}
  */
-export function recordDismissal(prItem, dismissedMap) {
-    if (!prItem || !dismissedMap) return dismissedMap;
+export function recordSnooze(prItem, snoozedMap) {
+    if (!prItem || !snoozedMap) return snoozedMap;
     const key = getPRKey(prItem);
     const prUpdatedAt = prItem.updatedAt instanceof Date
         ? prItem.updatedAt
         : new Date(prItem.updatedAt);
 
-    dismissedMap[key] = prUpdatedAt.toISOString();
+    snoozedMap[key] = prUpdatedAt.toISOString();
+    return snoozedMap;
+}
+
+/**
+ * Restores a snoozed PR by removing its entry from snoozedMap.
+ * @param {import('./prItem.js').PRItem} prItem
+ * @param {Record<string, string>} snoozedMap
+ * @returns {Record<string, string>}
+ */
+export function removeSnooze(prItem, snoozedMap) {
+    if (!prItem || !snoozedMap) return snoozedMap;
+    const key = getPRKey(prItem);
+    delete snoozedMap[key];
+    return snoozedMap;
+}
+
+/**
+ * Checks whether a PR is permanently dismissed.
+ * @param {import('./prItem.js').PRItem} prItem
+ * @param {Record<string, any>} dismissedMap
+ * @returns {boolean}
+ */
+export function isPRDismissed(prItem, dismissedMap) {
+    if (!prItem || !dismissedMap) return false;
+    const key = getPRKey(prItem);
+    return !!dismissedMap[key];
+}
+
+/**
+ * Marks a PR as permanently dismissed.
+ * @param {import('./prItem.js').PRItem} prItem
+ * @param {Record<string, any>} dismissedMap
+ * @returns {Record<string, any>}
+ */
+export function recordDismissal(prItem, dismissedMap) {
+    if (!prItem || !dismissedMap) return dismissedMap;
+    const key = getPRKey(prItem);
+    dismissedMap[key] = true;
     return dismissedMap;
 }
 
 /**
  * Restores a dismissed PR by removing its entry from dismissedMap.
  * @param {import('./prItem.js').PRItem} prItem
- * @param {Record<string, string>} dismissedMap
- * @returns {Record<string, string>}
+ * @param {Record<string, any>} dismissedMap
+ * @returns {Record<string, any>}
  */
 export function removeDismissal(prItem, dismissedMap) {
     if (!prItem || !dismissedMap) return dismissedMap;
@@ -65,24 +103,24 @@ export function removeDismissal(prItem, dismissedMap) {
 }
 
 /**
- * Removes dismissals for PRs that are no longer open or awaiting the user,
+ * Removes entries for PRs that are no longer open or awaiting the user,
  * e.g. merged or closed PRs, which would otherwise stay in GSettings forever.
  *
  * Only call this with the keys from a complete, error-free fetch: a PR
- * missing because of truncation or a partial error must keep its dismissal.
+ * missing because of truncation or a partial error must keep its entry.
  * Repository filters must not be applied to `fetchedKeys` either, so that
- * changing a filter does not forget dismissals.
+ * changing a filter does not forget dismissals or snoozes.
  *
- * @param {Record<string, string>} dismissedMap
+ * @param {Record<string, any>} map
  * @param {Set<string>} fetchedKeys PR keys (see getPRKey) of every fetched PR
  * @returns {boolean} whether any entry was removed
  */
-export function pruneMissingDismissals(dismissedMap, fetchedKeys) {
-    if (!dismissedMap || !fetchedKeys) return false;
+export function pruneMissingKeys(map, fetchedKeys) {
+    if (!map || !fetchedKeys) return false;
     let changed = false;
-    for (const key of Object.keys(dismissedMap)) {
+    for (const key of Object.keys(map)) {
         if (!fetchedKeys.has(key)) {
-            delete dismissedMap[key];
+            delete map[key];
             changed = true;
         }
     }
@@ -90,15 +128,27 @@ export function pruneMissingDismissals(dismissedMap, fetchedKeys) {
 }
 
 /**
- * Categorizes filtered PR items into active categories or DISMISSED,
- * and prunes dismissed items that received subsequent updates.
+ * Alias for pruneMissingKeys for backward compatibility.
+ * @param {Record<string, any>} dismissedMap
+ * @param {Set<string>} fetchedKeys
+ * @returns {boolean}
+ */
+export function pruneMissingDismissals(dismissedMap, fetchedKeys) {
+    return pruneMissingKeys(dismissedMap, fetchedKeys);
+}
+
+/**
+ * Categorizes filtered PR items into active categories, SNOOZED, or DISMISSED,
+ * and prunes snoozed items that received subsequent updates.
  *
  * @param {Array<import('./prItem.js').PRItem>} prItems
- * @param {Record<string, string>} dismissedMap
- * @returns {{ categorizedMap: Map<string, Array<import('./prItem.js').PRItem>>, mapChanged: boolean }}
+ * @param {Record<string, string>} snoozedMap
+ * @param {Record<string, any>} dismissedMap
+ * @returns {{ categorizedMap: Map<string, Array<import('./prItem.js').PRItem>>, snoozedChanged: boolean, dismissedChanged: boolean, mapChanged: boolean }}
  */
-export function categorizeAndPruneDismissed(prItems, dismissedMap = {}) {
-    let mapChanged = false;
+export function categorizeAndPruneDismissed(prItems, snoozedMap = {}, dismissedMap = {}) {
+    let snoozedChanged = false;
+    const dismissedChanged = false;
 
     const categorizedMap = new Map();
     for (const catId of Object.values(CATEGORIES)) {
@@ -109,19 +159,30 @@ export function categorizeAndPruneDismissed(prItems, dismissedMap = {}) {
         if (!item || !item.category) continue;
 
         const key = getPRKey(item);
-        if (key && dismissedMap[key]) {
-            if (isPRDismissed(item, dismissedMap)) {
-                // Item is dismissed: place into DISMISSED category
-                categorizedMap.get(CATEGORIES.DISMISSED).push(item);
+
+        // 1. Permanent dismissal takes precedence
+        if (key && isPRDismissed(item, dismissedMap)) {
+            categorizedMap.get(CATEGORIES.DISMISSED).push(item);
+            if (snoozedMap && snoozedMap[key]) {
+                delete snoozedMap[key];
+                snoozedChanged = true;
+            }
+            continue;
+        }
+
+        // 2. Snooze check (temporary until update)
+        if (key && snoozedMap && snoozedMap[key]) {
+            if (isPRSnoozed(item, snoozedMap)) {
+                categorizedMap.get(CATEGORIES.SNOOZED).push(item);
                 continue;
             } else {
-                // Item has been updated since dismissal: un-dismiss and prune entry
-                delete dismissedMap[key];
-                mapChanged = true;
+                // Item has been updated since snooze: un-snooze and prune entry
+                delete snoozedMap[key];
+                snoozedChanged = true;
             }
         }
 
-        // Active item: place into its regular category
+        // 3. Active item: place into its regular category
         const list = categorizedMap.get(item.category);
         if (list) {
             list.push(item);
@@ -133,5 +194,10 @@ export function categorizeAndPruneDismissed(prItems, dismissedMap = {}) {
         list.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
     }
 
-    return { categorizedMap, mapChanged };
+    return {
+        categorizedMap,
+        snoozedChanged,
+        dismissedChanged,
+        mapChanged: snoozedChanged || dismissedChanged,
+    };
 }

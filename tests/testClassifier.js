@@ -479,7 +479,7 @@ console.log('\n--- Testing RepoFilter ---');
 console.log('\n--- Testing Category Metadata & Default Expansion ---');
 {
     for (const [key, meta] of Object.entries(CATEGORY_METADATA)) {
-        if (key === CATEGORIES.DISMISSED) {
+        if (key === CATEGORIES.DISMISSED || key === CATEGORIES.SNOOZED) {
             assertEqual(meta.defaultExpanded, false, `${key} (${meta.title}) section should not be expanded by default`);
         } else {
             assertEqual(meta.defaultExpanded, true, `${key} (${meta.title}) section should be expanded by default`);

@@ -14,10 +14,14 @@ class CollapsibleSection extends PopupMenu.PopupSubMenuMenuItem {
     _init(categoryId, title, iconName, defaultExpanded = false, callbacks = {}) {
         super._init(title, true);
         this.add_style_class_name('pr-section-header');
+        this._categoryId = categoryId;
         this._defaultExpanded = defaultExpanded;
+        this._onSnooze = callbacks.onSnooze || null;
         this._onDismiss = callbacks.onDismiss || null;
-        this._onUndo = callbacks.onUndo || null;
+        this._onUndo = callbacks.onUndo || callbacks.onRestore || null;
+        this._onRestore = callbacks.onRestore || callbacks.onUndo || null;
         this._isDismissedSection = (categoryId === CATEGORIES.DISMISSED);
+        this._isSnoozedSection = (categoryId === CATEGORIES.SNOOZED);
         // Open state chosen by the user (true/false), or null to follow the
         // default. GNOME Shell closes submenus whenever the dropdown closes,
         // so this is what gets restored when it reopens.
@@ -119,9 +123,13 @@ class CollapsibleSection extends PopupMenu.PopupSubMenuMenuItem {
         } else {
             for (const item of prItems) {
                 const row = new PRRow(item, {
+                    onSnooze: this._onSnooze,
                     onDismiss: this._onDismiss,
                     onUndo: this._onUndo,
+                    onRestore: this._onRestore,
+                    categoryId: this._categoryId,
                     isDismissed: this._isDismissedSection,
+                    isSnoozed: this._isSnoozedSection,
                 });
                 this.menu.addMenuItem(row);
             }
@@ -133,8 +141,10 @@ class CollapsibleSection extends PopupMenu.PopupSubMenuMenuItem {
     destroy() {
         this.clear();
         this._countBadge = null;
+        this._onSnooze = null;
         this._onDismiss = null;
         this._onUndo = null;
+        this._onRestore = null;
         super.destroy();
     }
 });

@@ -49,10 +49,16 @@
       <description>Cached login of the authenticated GitHub account.</description>
     </key>
 
+    <key name="snoozed-prs" type="s">
+      <default>"{}"</default>
+      <summary>Snoozed pull requests</summary>
+      <description>JSON-encoded dictionary mapping PR identifiers to the ISO timestamp when snoozed.</description>
+    </key>
+
     <key name="dismissed-prs" type="s">
       <default>"{}"</default>
       <summary>Dismissed pull requests</summary>
-      <description>JSON-encoded dictionary mapping PR identifiers to the ISO timestamp when dismissed.</description>
+      <description>JSON-encoded dictionary mapping PR identifiers to boolean true for permanently dismissed pull requests.</description>
     </key>
 
     <key name="token-changed" type="x">

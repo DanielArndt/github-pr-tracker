@@ -260,11 +260,13 @@
     border-radius: 6px;
 }
 
-/* Action Buttons (Dismiss & Undo) */
-.pr-menu-item-dismissed {
+/* Action Buttons (Snooze, Dismiss & Undo) */
+.pr-menu-item-dismissed,
+.pr-menu-item-snoozed {
     opacity: 0.75;
 }
 
+.pr-snooze-btn,
 .pr-dismiss-btn,
 .pr-undo-btn {
     padding: 1px 4px;
@@ -274,6 +276,7 @@
     margin-left: 2px;
 }
 
+.pr-snooze-btn:hover,
 .pr-dismiss-btn:hover,
 .pr-undo-btn:hover {
     color: #ffffff;
@@ -281,6 +284,7 @@
     background-color: rgba(255, 255, 255, 0.15);
 }
 
+.pr-snooze-btn:active,
 .pr-dismiss-btn:active,
 .pr-undo-btn:active {
     background-color: rgba(255, 255, 255, 0.25);
@@ -393,17 +397,20 @@
     color: #3d3d42;
 }
 
+.pr-light .pr-snooze-btn,
 .pr-light .pr-dismiss-btn,
 .pr-light .pr-undo-btn {
     color: #6b6b70;
 }
 
+.pr-light .pr-snooze-btn:hover,
 .pr-light .pr-dismiss-btn:hover,
 .pr-light .pr-undo-btn:hover {
     color: #000000;
     background-color: rgba(0, 0, 0, 0.1);
 }
 
+.pr-light .pr-snooze-btn:active,
 .pr-light .pr-dismiss-btn:active,
 .pr-light .pr-undo-btn:active {
     background-color: rgba(0, 0, 0, 0.18);

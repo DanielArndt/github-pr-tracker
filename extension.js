@@ -13,9 +13,11 @@ import { PRItem } from './src/models/prItem.js';
 import { collectPRNodes } from './src/models/prNodes.js';
 import {
     getPRKey,
+    recordSnooze,
+    removeSnooze,
     recordDismissal,
     removeDismissal,
-    pruneMissingDismissals,
+    pruneMissingKeys,
     categorizeAndPruneDismissed,
 } from './src/models/dismissTracker.js';
 
@@ -39,7 +41,9 @@ export default class GitHubPRExtension extends Extension {
             this,
             () => this.refreshData(),
             {
+                onSnooze: (pr) => this.snoozePR(pr),
                 onDismiss: (pr) => this.dismissPR(pr),
+                onRestore: (pr) => this.restorePR(pr),
                 onUndo: (pr) => this.restorePR(pr),
             }
         );
@@ -201,14 +205,16 @@ export default class GitHubPRExtension extends Extension {
                 node => new PRItem(node, this._viewerLogin, { includeTeamReviews })
             );
 
-            // Forget dismissals of PRs that are gone (merged, closed, review
+            // Forget snoozes/dismissals of PRs that are gone (merged, closed, review
             // no longer requested), but only when nothing could be missing
             // from this response
             if (errors.length === 0 && !truncated) {
-                const dismissedMap = this._loadDismissedMap();
+                const { snoozed, dismissed } = this._loadMaps();
                 const fetchedKeys = new Set(this._rawPRItems.map(getPRKey));
-                if (pruneMissingDismissals(dismissedMap, fetchedKeys)) {
-                    this._saveDismissedMap(dismissedMap);
+                const snoozedPruned = pruneMissingKeys(snoozed, fetchedKeys);
+                const dismissedPruned = pruneMissingKeys(dismissed, fetchedKeys);
+                if (snoozedPruned || dismissedPruned) {
+                    this._saveMaps(snoozed, dismissed);
                 }
             }
 
@@ -236,57 +242,110 @@ export default class GitHubPRExtension extends Extension {
         }
     }
 
-    _loadDismissedMap() {
-        try {
-            const jsonStr = this._settings ? this._settings.get_string('dismissed-prs') : '{}';
-            return jsonStr ? JSON.parse(jsonStr) : {};
-        } catch (err) {
-            console.error('[GitHub PR Tracker] Error parsing dismissed-prs:', err);
-            return {};
+    _loadMaps() {
+        let snoozed = {};
+        let dismissed = {};
+        if (this._settings) {
+            try {
+                const sStr = this._settings.get_string('snoozed-prs');
+                snoozed = sStr ? JSON.parse(sStr) : {};
+            } catch (err) {
+                console.error('[GitHub PR Tracker] Error parsing snoozed-prs:', err);
+                snoozed = {};
+            }
+            try {
+                const dStr = this._settings.get_string('dismissed-prs');
+                dismissed = dStr ? JSON.parse(dStr) : {};
+            } catch (err) {
+                console.error('[GitHub PR Tracker] Error parsing dismissed-prs:', err);
+                dismissed = {};
+            }
+
+            // Migration: if snoozed-prs is empty but dismissed-prs contains ISO timestamp strings
+            // (the old format from previous versions which behaved as snooze), migrate them to snoozed-prs.
+            if (Object.keys(snoozed).length === 0 && Object.keys(dismissed).length > 0) {
+                let migrated = false;
+                for (const [key, val] of Object.entries(dismissed)) {
+                    if (typeof val === 'string') {
+                        snoozed[key] = val;
+                        delete dismissed[key];
+                        migrated = true;
+                    }
+                }
+                if (migrated) {
+                    this._settings.set_string('snoozed-prs', JSON.stringify(snoozed));
+                    this._settings.set_string('dismissed-prs', JSON.stringify(dismissed));
+                }
+            }
         }
+        return { snoozed, dismissed };
     }
 
-    _saveDismissedMap(map) {
+    _saveMaps(snoozed, dismissed) {
         if (this._settings) {
-            this._settings.set_string('dismissed-prs', JSON.stringify(map || {}));
+            if (snoozed !== undefined) {
+                this._settings.set_string('snoozed-prs', JSON.stringify(snoozed || {}));
+            }
+            if (dismissed !== undefined) {
+                this._settings.set_string('dismissed-prs', JSON.stringify(dismissed || {}));
+            }
         }
     }
 
     /**
-     * Dismisses a pull request until it receives a new update on GitHub.
+     * Snoozes a pull request until it receives a new update on GitHub.
+     * @param {PRItem} prItem
+     */
+    snoozePR(prItem) {
+        if (!prItem) return;
+        const { snoozed, dismissed } = this._loadMaps();
+        recordSnooze(prItem, snoozed);
+        removeDismissal(prItem, dismissed);
+        this._saveMaps(snoozed, dismissed);
+        this._applyFilterAndDisplay(this._rawPRItems);
+    }
+
+    /**
+     * Permanently dismisses a pull request.
      * @param {PRItem} prItem
      */
     dismissPR(prItem) {
         if (!prItem) return;
-        const dismissedMap = this._loadDismissedMap();
-        recordDismissal(prItem, dismissedMap);
-        this._saveDismissedMap(dismissedMap);
+        const { snoozed, dismissed } = this._loadMaps();
+        recordDismissal(prItem, dismissed);
+        removeSnooze(prItem, snoozed);
+        this._saveMaps(snoozed, dismissed);
         this._applyFilterAndDisplay(this._rawPRItems);
     }
 
     /**
-     * Restores a dismissed pull request back to its active category.
+     * Restores a snoozed or dismissed pull request back to its active category.
      * @param {PRItem} prItem
      */
     restorePR(prItem) {
         if (!prItem) return;
-        const dismissedMap = this._loadDismissedMap();
-        removeDismissal(prItem, dismissedMap);
-        this._saveDismissedMap(dismissedMap);
+        const { snoozed, dismissed } = this._loadMaps();
+        removeSnooze(prItem, snoozed);
+        removeDismissal(prItem, dismissed);
+        this._saveMaps(snoozed, dismissed);
         this._applyFilterAndDisplay(this._rawPRItems);
     }
 
     /**
-     * Applies repository filters, handles dismissed PRs, and distributes PRs to categories.
+     * Applies repository filters, handles snoozed/dismissed PRs, and distributes PRs to categories.
      * @param {Array<PRItem>} prItems
      */
     _applyFilterAndDisplay(prItems) {
         const filtered = prItems.filter(item => item && item.category && this._repoFilter.matches(item));
-        const dismissedMap = this._loadDismissedMap();
-        const { categorizedMap, mapChanged } = categorizeAndPruneDismissed(filtered, dismissedMap);
+        const { snoozed, dismissed } = this._loadMaps();
+        const { categorizedMap, snoozedChanged, dismissedChanged } = categorizeAndPruneDismissed(
+            filtered,
+            snoozed,
+            dismissed
+        );
 
-        if (mapChanged) {
-            this._saveDismissedMap(dismissedMap);
+        if (snoozedChanged || dismissedChanged) {
+            this._saveMaps(snoozed, dismissed);
         }
 
         this._indicator.updateCounts(categorizedMap);

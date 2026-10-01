@@ -111,6 +111,7 @@ export class MenuView {
             CATEGORIES.READY_TO_MERGE,
             CATEGORIES.WAITING_REVIEW,
             CATEGORIES.DRAFT,
+            CATEGORIES.SNOOZED,
             CATEGORIES.DISMISSED,
         ];
 

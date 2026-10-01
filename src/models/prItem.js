@@ -7,6 +7,7 @@ export const CATEGORIES = {
     READY_TO_MERGE: 'READY_TO_MERGE',
     WAITING_REVIEW: 'WAITING_REVIEW',
     DRAFT: 'DRAFT',
+    SNOOZED: 'SNOOZED',
     DISMISSED: 'DISMISSED',
 };
 
@@ -36,7 +37,7 @@ export const CATEGORY_METADATA = {
         id: CATEGORIES.WAITING_REVIEW,
         title: 'Waiting on Review',
         symbol: '⏳',
-        iconName: 'alarm-symbolic',
+        iconName: 'preferences-system-time-symbolic',
         defaultExpanded: true,
     },
     [CATEGORIES.DRAFT]: {
@@ -45,6 +46,13 @@ export const CATEGORY_METADATA = {
         symbol: '📝',
         iconName: 'document-edit-symbolic',
         defaultExpanded: true,
+    },
+    [CATEGORIES.SNOOZED]: {
+        id: CATEGORIES.SNOOZED,
+        title: 'Snoozed',
+        symbol: '💤',
+        iconName: 'alarm-symbolic',
+        defaultExpanded: false,
     },
     [CATEGORIES.DISMISSED]: {
         id: CATEGORIES.DISMISSED,
