@@ -235,6 +235,12 @@
     border: 1px solid rgba(225, 175, 25, 0.45);
 }
 
+.pr-tag-assigned {
+    background-color: rgba(0, 160, 180, 0.22);
+    color: #4de0f0;
+    border: 1px solid rgba(0, 160, 180, 0.45);
+}
+
 .pr-tag-default {
     background-color: rgba(120, 120, 120, 0.2);
     color: #e0e0e0;
@@ -390,6 +396,11 @@
 .pr-light .pr-tag-workflow-approval {
     background-color: rgba(225, 175, 25, 0.16);
     color: #7a5a00;
+}
+
+.pr-light .pr-tag-assigned {
+    background-color: rgba(0, 140, 160, 0.14);
+    color: #007788;
 }
 
 .pr-light .pr-tag-default {

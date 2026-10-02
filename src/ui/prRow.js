@@ -35,6 +35,8 @@ function reasonToCssClass(reason) {
             return 'pr-tag-draft';
         case 'Awaiting Workflow Approval':
             return 'pr-tag-workflow-approval';
+        case 'Assigned':
+            return 'pr-tag-assigned';
         default:
             return 'pr-tag-default';
     }

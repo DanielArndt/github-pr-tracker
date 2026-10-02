@@ -43,6 +43,14 @@
       </description>
     </key>
 
+    <key name="include-assigned-prs" type="b">
+      <default>true</default>
+      <summary>Include assigned pull requests</summary>
+      <description>
+        Whether to include pull requests that are assigned to you.
+      </description>
+    </key>
+
     <key name="last-username" type="s">
       <default>""</default>
       <summary>Last detected GitHub username</summary>

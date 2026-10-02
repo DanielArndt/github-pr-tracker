@@ -60,6 +60,7 @@ export default class GitHubPRExtension extends Extension {
             this._settings.connect('changed::ignore-archived', () => this._onFilterSettingsChanged()),
             this._settings.connect('changed::ignore-forks', () => this._onFilterSettingsChanged()),
             this._settings.connect('changed::include-team-reviews', () => this._onFilterSettingsChanged()),
+            this._settings.connect('changed::include-assigned-prs', () => this._onFilterSettingsChanged()),
             this._settings.connect(`changed::${TOKEN_CHANGED_KEY}`, () => this.refreshData()),
         ];
 
@@ -123,8 +124,9 @@ export default class GitHubPRExtension extends Extension {
         // Re-classify and re-filter cached PR items without making another network request
         if (this._rawNodes.length > 0) {
             const includeTeamReviews = this._settings.get_boolean('include-team-reviews');
+            const includeAssignedPRs = this._settings.get_boolean('include-assigned-prs');
             this._rawPRItems = this._rawNodes.map(
-                node => new PRItem(node, this._viewerLogin, { includeTeamReviews })
+                node => new PRItem(node, this._viewerLogin, { includeTeamReviews, includeAssignedPRs })
             );
             this._applyFilterAndDisplay(this._rawPRItems);
         }
@@ -201,8 +203,9 @@ export default class GitHubPRExtension extends Extension {
             const { nodes, truncated } = collectPRNodes(data);
             this._rawNodes = nodes;
             const includeTeamReviews = this._settings.get_boolean('include-team-reviews');
+            const includeAssignedPRs = this._settings.get_boolean('include-assigned-prs');
             this._rawPRItems = this._rawNodes.map(
-                node => new PRItem(node, this._viewerLogin, { includeTeamReviews })
+                node => new PRItem(node, this._viewerLogin, { includeTeamReviews, includeAssignedPRs })
             );
 
             // Forget snoozes/dismissals of PRs that are gone (merged, closed, review

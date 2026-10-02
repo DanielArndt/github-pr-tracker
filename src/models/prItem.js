@@ -207,6 +207,7 @@ export class PRItem {
      * @param {string} viewerLogin Login of authenticated user
      * @param {Object} [options]
      * @param {boolean} [options.includeTeamReviews=false]
+     * @param {boolean} [options.includeAssignedPRs=true]
      */
     constructor(rawNode, viewerLogin, options = {}) {
         this.id = rawNode.id;
@@ -237,6 +238,7 @@ export class PRItem {
      * @param {string} viewerLogin
      * @param {Object} [options]
      * @param {boolean} [options.includeTeamReviews=false]
+     * @param {boolean} [options.includeAssignedPRs=true]
      * @returns {string|null} Category ID or null if excluded
      */
     _classify(rawNode, viewerLogin, options = {}) {
@@ -244,12 +246,27 @@ export class PRItem {
         const reviewThreads = rawNode.reviewThreads?.nodes || [];
         const latestReviews = rawNode.latestReviews?.nodes || [];
         const reviewRequests = rawNode.reviewRequests?.nodes || [];
+        const assignees = rawNode.assignees?.nodes || [];
 
-        // 1. User's Own PRs
-        if (this.isAuthoredByViewer) {
+        const isAssignedToViewer = assignees.some(
+            a => a?.login?.toLowerCase() === viewerLower
+        );
+        const directReviewRequested = reviewRequests.some(
+            r => r.requestedReviewer?.login?.toLowerCase() === viewerLower
+        );
+        const includeAssignedPRs = options.includeAssignedPRs ?? options.includeAssigned ?? true;
+
+        // Once assigned to user, always treat as user's own PR (taking ownership, not a reviewer)
+        const isOwned = this.isAuthoredByViewer || (includeAssignedPRs && isAssignedToViewer);
+
+        // 1. User's Own PRs (or Assigned PRs where user takes ownership)
+        if (isOwned) {
             // Strictly Drafts
             if (this.isDraft) {
                 this.reasons.push('Draft');
+                if (!this.isAuthoredByViewer) {
+                    this.reasons.push('Assigned');
+                }
                 return CATEGORIES.DRAFT;
             }
 
@@ -280,6 +297,9 @@ export class PRItem {
             }
 
             if (actionReasons.length > 0) {
+                if (!this.isAuthoredByViewer) {
+                    actionReasons.push('Assigned');
+                }
                 this.reasons = actionReasons;
                 return CATEGORIES.ACTION_REQUIRED;
             }
@@ -291,6 +311,9 @@ export class PRItem {
 
             if (isApproved && canMerge && ciPassing && !hasUnresolvedComments) {
                 this.reasons = ['Approved'];
+                if (!this.isAuthoredByViewer) {
+                    this.reasons.push('Assigned');
+                }
                 return CATEGORIES.READY_TO_MERGE;
             }
 
@@ -306,15 +329,15 @@ export class PRItem {
                 waitingReasons.push('Awaiting Workflow Approval');
             }
 
+            if (!this.isAuthoredByViewer) {
+                waitingReasons.push('Assigned');
+            }
+
             this.reasons = waitingReasons;
             return CATEGORIES.WAITING_REVIEW;
         }
 
         // 2. PRs From Others
-        const directReviewRequested = reviewRequests.some(
-            r => r.requestedReviewer?.login?.toLowerCase() === viewerLower
-        );
-
         const previouslyReviewed = latestReviews.some(
             r => r.author?.login?.toLowerCase() === viewerLower
         );

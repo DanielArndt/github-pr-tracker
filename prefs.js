@@ -229,6 +229,13 @@ export default class GitHubPRExtensionPreferences extends ExtensionPreferences {
         settings.bind('include-team-reviews', teamReviewsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         filterGroup.add(teamReviewsRow);
 
+        const assignedPrsRow = new Adw.SwitchRow({
+            title: 'Include Assigned Pull Requests',
+            subtitle: 'Include pull requests assigned to you',
+        });
+        settings.bind('include-assigned-prs', assignedPrsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        filterGroup.add(assignedPrsRow);
+
         // --- Group 3: Polling & Behavior ---
         const behaviorGroup = new Adw.PreferencesGroup({
             title: 'Behavior and Polling',

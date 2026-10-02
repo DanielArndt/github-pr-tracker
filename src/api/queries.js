@@ -20,6 +20,11 @@ fragment AuthoredPRDetails on PullRequest {
   author {
     login
   }
+  assignees(first: 100) {
+    nodes {
+      login
+    }
+  }
   baseRef {
     name
     branchProtectionRule {
@@ -98,6 +103,11 @@ fragment SearchPRDetails on PullRequest {
   author {
     login
   }
+  assignees(first: 100) {
+    nodes {
+      login
+    }
+  }
   reviewRequests(first: 100) {
     nodes {
       requestedReviewer {
@@ -147,6 +157,16 @@ query PullRequestsData {
     nodes {
       ... on PullRequest {
         ...SearchPRDetails
+      }
+    }
+  }
+  assigned: search(query: "type:pr state:open assignee:@me", type: ISSUE, first: ${MAX_PRS_PER_LIST}) {
+    pageInfo {
+      hasNextPage
+    }
+    nodes {
+      ... on PullRequest {
+        ...AuthoredPRDetails
       }
     }
   }

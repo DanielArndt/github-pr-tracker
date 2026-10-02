@@ -113,7 +113,19 @@ app.connect('activate', () => {
             throw new Error('Generate Token row does not contain expected LinkButton suffix');
         }
 
+        const assignedRow = findWidget(
+            window,
+            w => w instanceof Adw.SwitchRow && w.title === 'Include Assigned Pull Requests'
+        );
+        if (!assignedRow) {
+            throw new Error('Include Assigned Pull Requests switch row not found in preferences window');
+        }
+        if (!assignedRow.active) {
+            throw new Error('Include Assigned Pull Requests switch row should be active by default');
+        }
+
         console.log('✓ Successfully verified token generation link and action row!');
+        console.log('✓ Successfully verified Include Assigned Pull Requests switch row!');
         console.log('✓ Successfully initialized preferences window and all widget bindings!');
         app.quit();
     } catch (e) {

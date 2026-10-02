@@ -53,6 +53,7 @@ function makePR(overrides = {}) {
         author: {
             login: 'alice',
         },
+        assignees: { nodes: [] },
         reviewRequests: { nodes: [] },
         latestReviews: { nodes: [] },
         reviewThreads: { nodes: [] },
@@ -439,6 +440,136 @@ function withChecks({ rollupState, contexts, required = null, mergeStateStatus, 
     }), viewerLogin, { includeTeamReviews: true });
     assertEqual(pr.category, null, 'Team review excluded if already reviewed by viewer');
     assertEqual(pr.reasons, [], 'No reasons for excluded PR');
+}
+
+// 16. Assigned PR without review request with failing CI -> ACTION_REQUIRED (treated as owned)
+{
+    const pr = new PRItem(withChecks({
+        author: { login: 'bob' },
+        assignees: {
+            nodes: [{ login: 'alice' }],
+        },
+        rollupState: 'FAILURE',
+        contexts: [checkRun('test', 'FAILURE')],
+        required: ['test'],
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.ACTION_REQUIRED, 'Assigned PR without review request and failing CI is ACTION_REQUIRED');
+    assertEqual(pr.reasons, ['CI Failed', 'Assigned'], 'Reasons include CI Failed and Assigned');
+}
+
+// 17. Assigned PR without review request and approved + passing CI -> READY_TO_MERGE (treated as owned)
+{
+    const pr = new PRItem(makePR({
+        author: { login: 'bob' },
+        assignees: {
+            nodes: [{ login: 'alice' }],
+        },
+        reviewDecision: 'APPROVED',
+        mergeable: 'MERGEABLE',
+        statusCheckRollup: {
+            state: 'SUCCESS',
+            contexts: { nodes: [] },
+        },
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.READY_TO_MERGE, 'Assigned PR without review request and approved is READY_TO_MERGE');
+    assertEqual(pr.reasons, ['Approved', 'Assigned'], 'Reasons include Approved and Assigned');
+}
+
+// 18. Assigned PR without review request awaiting review -> WAITING_REVIEW (treated as owned)
+{
+    const pr = new PRItem(makePR({
+        author: { login: 'bob' },
+        assignees: {
+            nodes: [{ login: 'alice' }],
+        },
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.WAITING_REVIEW, 'Assigned PR without review request is WAITING_REVIEW');
+    assertEqual(pr.reasons, ['Awaiting Review', 'Assigned'], 'Reasons include Awaiting Review and Assigned');
+}
+
+// 19. Assigned PR without review request in draft -> DRAFT (treated as owned)
+{
+    const pr = new PRItem(makePR({
+        author: { login: 'bob' },
+        isDraft: true,
+        assignees: {
+            nodes: [{ login: 'alice' }],
+        },
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.DRAFT, 'Assigned PR without review request in draft is DRAFT');
+    assertEqual(pr.reasons, ['Draft', 'Assigned'], 'Reasons include Draft and Assigned');
+}
+
+// 20. Assigned PR with review request is still treated as owned (user is not a reviewer)
+{
+    const pr = new PRItem(makePR({
+        author: { login: 'bob' },
+        assignees: {
+            nodes: [{ login: 'alice' }],
+        },
+        reviewRequests: {
+            nodes: [{ requestedReviewer: { login: 'alice' } }],
+        },
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.WAITING_REVIEW, 'Assigned PR with review request is treated as owned (WAITING_REVIEW)');
+    assertEqual(pr.reasons, ['Awaiting Review', 'Assigned'], 'Reasons include Awaiting Review and Assigned');
+}
+
+// 21. Assigned PR with review request and failing CI is ACTION_REQUIRED
+{
+    const pr = new PRItem(withChecks({
+        author: { login: 'bob' },
+        assignees: {
+            nodes: [{ login: 'alice' }],
+        },
+        reviewRequests: {
+            nodes: [{ requestedReviewer: { login: 'alice' } }],
+        },
+        rollupState: 'FAILURE',
+        contexts: [checkRun('test', 'FAILURE')],
+        required: ['test'],
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.ACTION_REQUIRED, 'Assigned PR with review request and failing CI is ACTION_REQUIRED');
+    assertEqual(pr.reasons, ['CI Failed', 'Assigned'], 'Reasons include CI Failed and Assigned');
+}
+
+// 22. Assigned PR without review request excluded when includeAssignedPRs: false
+{
+    const pr = new PRItem(makePR({
+        author: { login: 'bob' },
+        assignees: {
+            nodes: [{ login: 'alice' }],
+        },
+    }), viewerLogin, { includeAssignedPRs: false });
+    assertEqual(pr.category, null, 'Assigned PR excluded when includeAssignedPRs is false');
+    assertEqual(pr.reasons, [], 'No reasons for excluded assigned PR');
+}
+
+// 23. Assigned PR with review request falls back to reviewer role when includeAssignedPRs: false
+{
+    const pr = new PRItem(makePR({
+        author: { login: 'bob' },
+        assignees: {
+            nodes: [{ login: 'alice' }],
+        },
+        reviewRequests: {
+            nodes: [{ requestedReviewer: { login: 'alice' } }],
+        },
+    }), viewerLogin, { includeAssignedPRs: false });
+    assertEqual(pr.category, CATEGORIES.NEEDS_MY_REVIEW, 'Falls back to NEEDS_MY_REVIEW when includeAssignedPRs is false');
+    assertEqual(pr.reasons, ['Review Requested'], 'Reason is Review Requested without Assigned tag');
+}
+
+// 24. Authored PR assigned to viewer remains categorized under authored rules even when includeAssignedPRs: false
+{
+    const pr = new PRItem(makePR({
+        author: { login: 'alice' },
+        assignees: {
+            nodes: [{ login: 'alice' }],
+        },
+    }), viewerLogin, { includeAssignedPRs: false });
+    assertEqual(pr.category, CATEGORIES.WAITING_REVIEW, 'Authored PR remains WAITING_REVIEW even when includeAssignedPRs is false');
+    assertEqual(pr.reasons, ['Awaiting Review'], 'Authored PR does not have Assigned reason pill');
 }
 
 console.log('\n--- Testing RepoFilter ---');

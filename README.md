@@ -13,20 +13,20 @@ categories with precise status reason badges.
 ## Features
 
 - **Categorized PR Sections**:
-  - ⚠️ **Action Required**: Pull requests authored by you that need your attention:
+  - ⚠️ **Action Required**: Pull requests authored by you (or assigned to you) that need your attention:
     - Reviewers requested changes (`CHANGES_REQUESTED`)
     - Failing required CI checks (checks required by branch protection, or failing checks that block merging when branch protection is not visible to you)
     - Merge conflicts with the target branch
     - Unresolved review comments/threads
-  - 💬 **Needs My Review**: Pull requests from others where:
+  - 💬 **Needs My Review**: Pull requests from others (not assigned to you) where:
     - Review was requested directly from you (including author re-requests on previously reviewed PRs)
     - Review was requested from your team (when team review is enabled in preferences and you have not already reviewed it)
-  - ✓ **Ready to Merge**: Approved pull requests authored by you with passing required CI checks and no conflicts.
-  - ⏳ **Waiting on Review**: Open, non-draft pull requests authored by you that are awaiting review from others.
-  - 📝 **Draft PRs**: Your open draft pull requests.
+  - ✓ **Ready to Merge**: Approved pull requests authored by you (or assigned to you) with passing required CI checks and no conflicts.
+  - ⏳ **Waiting on Review**: Open, non-draft pull requests authored by you (or assigned to you) that are awaiting review from others.
+  - 📝 **Draft PRs**: Open draft pull requests authored by you (or assigned to you).
 - **Informative PR Cards**:
   - Displays Repository (`owner/repo`), PR number (`#123`), Title, Author, and time elapsed.
-  - Displays 1–2 word reason pills (e.g. `Changes Requested`, `CI Failed`, `Conflicts`, `Unresolved Comments`) with support for multiple simultaneous reasons.
+  - Displays 1–2 word reason pills (e.g. `Changes Requested`, `CI Failed`, `Conflicts`, `Unresolved Comments`, `Assigned`) with support for multiple simultaneous reasons.
   - Clicking any pull request directly opens it in your default web browser.
 - **GNOME Shell Design Compliant**:
   - Top bar panel indicator shows compact pill badges with symbolic status icons and counts, with palettes for both the dark and light GNOME Shell styles.
@@ -36,13 +36,15 @@ categories with precise status reason badges.
 - **Customizable Filtering**:
   - Include/exclude repositories using glob patterns (e.g. `canonical/*`, `owner/repo`).
   - Toggle ignoring archived repositories and repository forks.
+  - Toggle including assigned pull requests (default: enabled).
+  - Toggle including team review requests (default: disabled).
 - **Configurable Polling**:
   - Background polling interval configurable between 1 and 60 minutes (default 5 minutes).
   - Manual refresh button in the menu footer.
 
 ### Limits
 
-- Up to 30 of your most recently updated open pull requests, and up to 30 pull requests awaiting your review,
+- Up to 30 of your most recently updated open pull requests, up to 30 pull requests awaiting your review, and up to 30 pull requests assigned to you,
   are fetched. When GitHub has more, the menu footer shows "latest 30 per list".
 - Per pull request, up to 100 reviewers, reviews, review threads and status checks are considered.
 
