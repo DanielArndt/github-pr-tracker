@@ -64,7 +64,6 @@ export class MenuView {
             y_align: Clutter.ActorAlign.CENTER,
             child: this._usernameLabel,
         });
-        this._usernameBtn.set_cursor_type(Clutter.CursorType.POINTER);
         this._usernameBtn.connect('clicked', () => this._openInbox());
         this._usernameBtn.hide();
 
