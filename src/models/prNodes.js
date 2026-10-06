@@ -10,7 +10,7 @@
 /**
  * Collects the unique PR nodes from a FETCH_ALL_PRS_QUERY response.
  *
- * A PR can appear in multiple lists (authored, review-requested search,
+ * A PR can appear in multiple lists (authored search, review-requested search,
  * or assigned search); properties are merged with later occurrences taking
  * precedence for overlapping keys. Null nodes (possible in partial responses)
  * are skipped.
@@ -18,7 +18,7 @@
  * @returns {CollectedPRNodes}
  */
 export function collectPRNodes(data) {
-    const authored = data?.viewer?.pullRequests;
+    const authored = data?.authored || data?.viewer?.pullRequests;
     const requested = data?.reviewRequested;
     const assigned = data?.assigned;
 

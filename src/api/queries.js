@@ -141,11 +141,13 @@ ${SEARCH_PR_FRAGMENT}
 query PullRequestsData {
   viewer {
     login
-    pullRequests(first: ${MAX_PRS_PER_LIST}, states: [OPEN], orderBy: {field: UPDATED_AT, direction: DESC}) {
-      pageInfo {
-        hasNextPage
-      }
-      nodes {
+  }
+  authored: search(query: "type:pr state:open author:@me sort:updated-desc", type: ISSUE, first: ${MAX_PRS_PER_LIST}) {
+    pageInfo {
+      hasNextPage
+    }
+    nodes {
+      ... on PullRequest {
         ...AuthoredPRDetails
       }
     }

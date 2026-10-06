@@ -32,8 +32,8 @@ function response({ authored = [], requested = [], assigned = [], authoredMore =
     return {
         viewer: {
             login: 'alice',
-            pullRequests: { pageInfo: { hasNextPage: authoredMore }, nodes: authored },
         },
+        authored: { pageInfo: { hasNextPage: authoredMore }, nodes: authored },
         reviewRequested: { pageInfo: { hasNextPage: requestedMore }, nodes: requested },
         assigned: { pageInfo: { hasNextPage: assignedMore }, nodes: assigned },
     };
@@ -72,6 +72,18 @@ console.log('--- Testing PR Node Collection ---');
     const { nodes, truncated } = collectPRNodes({ viewer: null, reviewRequested: null });
     assert(nodes.length === 0 && !truncated, 'Handles null connections from partial responses');
     assert(collectPRNodes(undefined).nodes.length === 0, 'Handles missing data');
+}
+
+{
+    const legacyResponse = {
+        viewer: {
+            login: 'alice',
+            pullRequests: { pageInfo: { hasNextPage: true }, nodes: [{ id: 'LEGACY' }] },
+        },
+    };
+    const { nodes, truncated } = collectPRNodes(legacyResponse);
+    assertEqual(nodes.map(n => n.id), ['LEGACY'], 'Supports legacy viewer.pullRequests fallback');
+    assert(truncated, 'Truncated when legacy viewer.pullRequests has more pages');
 }
 
 console.log(`\nPR Node Tests finished: ${passed} passed, ${failed} failed.`);
