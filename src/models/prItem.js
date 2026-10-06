@@ -122,7 +122,9 @@ function isContextPassing(ctx) {
  */
 function getCheckData(rawNode) {
     const rollup = rawNode?.statusCheckRollup || null;
-    const commitNode = rawNode?.commits?.nodes?.[0]?.commit;
+    const commitNode = rawNode?.headCommit?.nodes?.[0]?.commit ||
+        rawNode?.commits?.nodes?.[rawNode?.commits?.nodes?.length - 1]?.commit ||
+        rawNode?.commits?.nodes?.[0]?.commit;
     const checkSuites = (commitNode?.checkSuites?.nodes || []).filter(Boolean);
     return {
         rollup,
@@ -131,6 +133,62 @@ function getCheckData(rawNode) {
         contexts: (rollup?.contexts?.nodes || []).filter(Boolean),
         required: rawNode?.baseRef?.branchProtectionRule?.requiredStatusCheckContexts || [],
     };
+}
+
+/**
+ * Checks whether the target branch requires signed commits.
+ * @param {Object} rawNode
+ * @returns {boolean}
+ */
+function requiresSignedCommits(rawNode) {
+    if (rawNode?.baseRef?.branchProtectionRule?.requiresCommitSignatures) {
+        return true;
+    }
+    const rules = rawNode?.baseRef?.rules?.nodes || [];
+    return rules.some(r => r?.type === 'REQUIRED_SIGNATURES');
+}
+
+/**
+ * Checks if a PR has unsigned or invalidly signed commits when signatures are required.
+ * @param {Object} rawNode
+ * @returns {boolean}
+ */
+function hasUnsignedCommits(rawNode) {
+    const commitNodes = (rawNode?.commits?.nodes || []).filter(Boolean);
+    if (commitNodes.length === 0) {
+        return false;
+    }
+
+    const hasAnyUnsigned = commitNodes.some(n => {
+        const signature = n?.commit?.signature;
+        return !signature || !signature.isValid;
+    });
+
+    if (!hasAnyUnsigned) {
+        return false;
+    }
+
+    // 1. Target branch explicitly requires signed commits
+    if (requiresSignedCommits(rawNode)) {
+        return true;
+    }
+
+    // 2. Without branch protection or ruleset info: if the PR is BLOCKED
+    // while reviews are approved and CI checks pass, unsigned commits block the merge
+    const hasRuleInfo = (rawNode?.baseRef?.branchProtectionRule !== null &&
+        rawNode?.baseRef?.branchProtectionRule !== undefined) ||
+        (rawNode?.baseRef?.rules !== null &&
+        rawNode?.baseRef?.rules !== undefined);
+
+    if (!hasRuleInfo && rawNode?.mergeStateStatus === 'BLOCKED') {
+        const isApproved = rawNode?.reviewDecision === 'APPROVED';
+        const ciPassing = areRequiredChecksPassing(rawNode);
+        if (isApproved && ciPassing) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /**
@@ -302,6 +360,11 @@ export class PRItem {
             const hasUnresolvedComments = reviewThreads.some(t => t.isResolved === false);
             if (hasUnresolvedComments) {
                 actionReasons.push('Unresolved Comments');
+            }
+
+            // E. Unsigned Commits
+            if (hasUnsignedCommits(rawNode)) {
+                actionReasons.push('Unsigned Commits');
             }
 
             if (actionReasons.length > 0) {

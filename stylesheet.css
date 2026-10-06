@@ -205,6 +205,12 @@
     border: 1px solid rgba(225, 175, 25, 0.45);
 }
 
+.pr-tag-unsigned-commits {
+    background-color: rgba(235, 130, 40, 0.22);
+    color: #ffb169;
+    border: 1px solid rgba(235, 130, 40, 0.45);
+}
+
 .pr-tag-approved {
     background-color: rgba(46, 185, 90, 0.22);
     color: #72e8a1;
@@ -377,6 +383,11 @@
 .pr-light .pr-tag-unresolved {
     background-color: rgba(225, 175, 25, 0.16);
     color: #7a5a00;
+}
+
+.pr-light .pr-tag-unsigned-commits {
+    background-color: rgba(235, 130, 40, 0.14);
+    color: #a34700;
 }
 
 .pr-light .pr-tag-approved {
