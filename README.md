@@ -72,13 +72,6 @@ This compiles GSettings schemas, packages the extension, installs it to `~/.loca
 
 After installing for the first time, log out and log back in so GNOME Shell picks up the new extension. GNOME Shell cannot be restarted in place on Wayland.
 
-For development, you can instead test in a nested session without logging out:
-
-```bash
-dbus-run-session gnome-shell --devkit             # GNOME 49 and later
-dbus-run-session -- gnome-shell --nested --wayland # GNOME 45–48
-```
-
 Then enable the extension:
 ```bash
 gnome-extensions enable github-pr-tracker@dan.arndt.ca
@@ -109,6 +102,13 @@ gnome-extensions enable github-pr-tracker@dan.arndt.ca
 ---
 
 ## Development & Testing
+
+To test in a nested session without logging out:
+
+```bash
+dbus-run-session gnome-shell --devkit             # GNOME 49 and later
+dbus-run-session -- gnome-shell --nested --wayland # GNOME 45–48
+```
 
 Run unit tests covering classification, reason calculations, filtering, and preferences:
 
