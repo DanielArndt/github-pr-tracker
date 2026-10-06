@@ -178,7 +178,7 @@ function withChecks({ rollupState, contexts, required = null, mergeStateStatus, 
     assertEqual(pr.category, CATEGORIES.READY_TO_MERGE, 'Approved PR with only optional failures is READY_TO_MERGE');
 }
 
-// 4c. Approved but a required check is still running: not ready to merge
+// 4c. Approved but a required check is still running: moves to PENDING_CHECKS
 {
     const pr = new PRItem(withChecks({
         rollupState: 'PENDING',
@@ -188,7 +188,8 @@ function withChecks({ rollupState, contexts, required = null, mergeStateStatus, 
         contexts: [checkRun('unit-tests', null, 'IN_PROGRESS')],
     }), viewerLogin);
     assert(!pr.reasons.includes('CI Failed'), 'Running required check does not trigger CI Failed');
-    assertEqual(pr.category, CATEGORIES.WAITING_REVIEW, 'Approved PR with running required check is not READY_TO_MERGE');
+    assertEqual(pr.category, CATEGORIES.PENDING_CHECKS, 'Approved PR with running required check is PENDING_CHECKS');
+    assertEqual(pr.reasons, ['Approved'], 'Reason is Approved');
 }
 
 // 4d. Approved but a required check has not reported yet
@@ -200,7 +201,8 @@ function withChecks({ rollupState, contexts, required = null, mergeStateStatus, 
         reviewDecision: 'APPROVED',
         contexts: [checkRun('unit-tests', 'SUCCESS')],
     }), viewerLogin);
-    assertEqual(pr.category, CATEGORIES.WAITING_REVIEW, 'Missing required check keeps PR out of READY_TO_MERGE');
+    assertEqual(pr.category, CATEGORIES.PENDING_CHECKS, 'Missing required check puts approved PR in PENDING_CHECKS');
+    assertEqual(pr.reasons, ['Approved'], 'Reason is Approved');
 }
 
 // 4e. Approved with all required checks passing (neutral counts as passing)
@@ -256,7 +258,7 @@ function withChecks({ rollupState, contexts, required = null, mergeStateStatus, 
             }],
         },
     }), viewerLogin);
-    assertEqual(pr.category, CATEGORIES.WAITING_REVIEW, 'Approved PR awaiting workflow approval is WAITING_REVIEW');
+    assertEqual(pr.category, CATEGORIES.PENDING_CHECKS, 'Approved PR awaiting workflow approval is PENDING_CHECKS');
     assert(pr.reasons.includes('Awaiting Workflow Approval'), 'Reason includes Awaiting Workflow Approval');
     assert(pr.reasons.includes('Approved'), 'Reason includes Approved');
 }
@@ -269,8 +271,9 @@ function withChecks({ rollupState, contexts, required = null, mergeStateStatus, 
         reviewDecision: 'APPROVED',
         contexts: [checkRun('e2e-tests', 'ACTION_REQUIRED')],
     }), viewerLogin);
-    assertEqual(pr.category, CATEGORIES.WAITING_REVIEW, 'Check run with ACTION_REQUIRED keeps PR out of READY_TO_MERGE');
+    assertEqual(pr.category, CATEGORIES.PENDING_CHECKS, 'Check run with ACTION_REQUIRED keeps PR in PENDING_CHECKS');
     assert(pr.reasons.includes('Awaiting Workflow Approval'), 'Reason includes Awaiting Workflow Approval');
+    assert(pr.reasons.includes('Approved'), 'Reason includes Approved');
 }
 
 // 4j. Unapproved PR awaiting workflow approval
@@ -309,7 +312,8 @@ function withChecks({ rollupState, contexts, required = null, mergeStateStatus, 
             }],
         },
     }), viewerLogin);
-    assertEqual(pr.category, CATEGORIES.WAITING_REVIEW, 'PR with queued check suites and null rollup is not READY_TO_MERGE');
+    assertEqual(pr.category, CATEGORIES.PENDING_CHECKS, 'PR with queued check suites and null rollup is PENDING_CHECKS');
+    assertEqual(pr.reasons, ['Approved'], 'Reason is Approved');
 }
 
 // 5. Action Required: Merge Conflicts
@@ -531,6 +535,22 @@ function withChecks({ rollupState, contexts, required = null, mergeStateStatus, 
     }), viewerLogin);
     assertEqual(pr.category, CATEGORIES.ACTION_REQUIRED, 'Assigned PR with review request and failing CI is ACTION_REQUIRED');
     assertEqual(pr.reasons, ['CI Failed', 'Assigned'], 'Reasons include CI Failed and Assigned');
+}
+
+// 21b. Assigned PR approved with pending checks is PENDING_CHECKS
+{
+    const pr = new PRItem(withChecks({
+        author: { login: 'bob' },
+        assignees: {
+            nodes: [{ login: 'alice' }],
+        },
+        reviewDecision: 'APPROVED',
+        rollupState: 'PENDING',
+        contexts: [checkRun('test', null, 'IN_PROGRESS')],
+        required: ['test'],
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.PENDING_CHECKS, 'Assigned PR approved with pending checks is PENDING_CHECKS');
+    assertEqual(pr.reasons, ['Approved', 'Assigned'], 'Reasons include Approved and Assigned');
 }
 
 // 22. Assigned PR without review request excluded when includeAssignedPRs: false

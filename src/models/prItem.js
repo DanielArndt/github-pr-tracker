@@ -5,6 +5,7 @@ export const CATEGORIES = {
     ACTION_REQUIRED: 'ACTION_REQUIRED',
     NEEDS_MY_REVIEW: 'NEEDS_MY_REVIEW',
     READY_TO_MERGE: 'READY_TO_MERGE',
+    PENDING_CHECKS: 'PENDING_CHECKS',
     WAITING_REVIEW: 'WAITING_REVIEW',
     DRAFT: 'DRAFT',
     SNOOZED: 'SNOOZED',
@@ -31,6 +32,13 @@ export const CATEGORY_METADATA = {
         title: 'Ready to Merge',
         symbol: '✓',
         iconName: 'emblem-default-symbolic',
+        defaultExpanded: true,
+    },
+    [CATEGORIES.PENDING_CHECKS]: {
+        id: CATEGORIES.PENDING_CHECKS,
+        title: 'Pending Checks',
+        symbol: '⚙️',
+        iconName: 'system-run-symbolic',
         defaultExpanded: true,
     },
     [CATEGORIES.WAITING_REVIEW]: {
@@ -317,13 +325,21 @@ export class PRItem {
                 return CATEGORIES.READY_TO_MERGE;
             }
 
-            // F. Waiting on Review
-            const waitingReasons = [];
+            // F. Pending Checks (Review complete/approved, but checks not yet passing)
             if (isApproved) {
-                waitingReasons.push('Approved');
-            } else {
-                waitingReasons.push('Awaiting Review');
+                const pendingReasons = ['Approved'];
+                if (isAwaitingWorkflowApproval(rawNode)) {
+                    pendingReasons.push('Awaiting Workflow Approval');
+                }
+                if (!this.isAuthoredByViewer) {
+                    pendingReasons.push('Assigned');
+                }
+                this.reasons = pendingReasons;
+                return CATEGORIES.PENDING_CHECKS;
             }
+
+            // G. Waiting on Review
+            const waitingReasons = ['Awaiting Review'];
 
             if (isAwaitingWorkflowApproval(rawNode)) {
                 waitingReasons.push('Awaiting Workflow Approval');

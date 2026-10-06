@@ -235,6 +235,12 @@
     border: 1px solid rgba(225, 175, 25, 0.45);
 }
 
+.pr-tag-pending-checks {
+    background-color: rgba(80, 150, 230, 0.22);
+    color: #8bc3ff;
+    border: 1px solid rgba(80, 150, 230, 0.45);
+}
+
 .pr-tag-assigned {
     background-color: rgba(0, 160, 180, 0.22);
     color: #4de0f0;
@@ -396,6 +402,11 @@
 .pr-light .pr-tag-workflow-approval {
     background-color: rgba(225, 175, 25, 0.16);
     color: #7a5a00;
+}
+
+.pr-light .pr-tag-pending-checks {
+    background-color: rgba(80, 150, 230, 0.14);
+    color: #1a5fb4;
 }
 
 .pr-light .pr-tag-assigned {
