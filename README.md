@@ -18,6 +18,7 @@ categories with precise status reason badges.
     - Failing required CI checks (checks required by branch protection, or failing checks that block merging when branch protection is not visible to you)
     - Merge conflicts with the target branch
     - Unresolved review comments/threads
+    - Unsigned commits (when signed commits are required by branch protection rules or repository rulesets)
   - 💬 **Needs My Review**: Pull requests from others (not assigned to you) where:
     - Review was requested directly from you (including author re-requests on previously reviewed PRs)
     - Review was requested from your team (when team review is enabled in preferences and you have not already reviewed it)
@@ -26,7 +27,7 @@ categories with precise status reason badges.
   - 📝 **Draft PRs**: Open draft pull requests authored by you (or assigned to you).
 - **Informative PR Cards**:
   - Displays Repository (`owner/repo`), PR number (`#123`), Title, Author, and time elapsed.
-  - Displays 1–2 word reason pills (e.g. `Changes Requested`, `CI Failed`, `Conflicts`, `Unresolved Comments`, `Assigned`) with support for multiple simultaneous reasons.
+  - Displays 1–2 word reason pills (e.g. `Changes Requested`, `CI Failed`, `Conflicts`, `Unresolved Comments`, `Unsigned Commits`, `Assigned`) with support for multiple simultaneous reasons.
   - Clicking any pull request directly opens it in your default web browser.
 - **GNOME Shell Design Compliant**:
   - Top bar panel indicator shows compact pill badges with symbolic status icons and counts, with palettes for both the dark and light GNOME Shell styles.

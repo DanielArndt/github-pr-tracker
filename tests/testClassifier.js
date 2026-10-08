@@ -94,6 +94,15 @@ function checkSuite(conclusion, status = 'COMPLETED') {
     return { status, conclusion };
 }
 
+function commitNode(signature = null) {
+    return {
+        commit: {
+            oid: 'abcd123',
+            signature,
+        },
+    };
+}
+
 function withChecks({ rollupState, contexts, required = null, mergeStateStatus, ...rest }) {
     return makePR({
         statusCheckRollup: { state: rollupState, contexts: { nodes: contexts } },
@@ -335,6 +344,134 @@ function withChecks({ rollupState, contexts, required = null, mergeStateStatus, 
     }), viewerLogin);
     assertEqual(pr.category, CATEGORIES.ACTION_REQUIRED, 'Unresolved thread categorized as ACTION_REQUIRED');
     assert(pr.reasons.includes('Unresolved Comments'), 'Reason includes Unresolved Comments');
+}
+
+// 6b. Action Required: Unsigned Commits
+{
+    // 6b-1. Target branch requires signatures via branchProtectionRule
+    const pr = new PRItem(makePR({
+        reviewDecision: 'APPROVED',
+        baseRef: {
+            name: 'main',
+            branchProtectionRule: { requiresCommitSignatures: true },
+        },
+        commits: {
+            nodes: [commitNode(null)],
+        },
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.ACTION_REQUIRED, 'Unsigned commit with branchProtectionRule categorized as ACTION_REQUIRED');
+    assert(pr.reasons.includes('Unsigned Commits'), 'Reason includes Unsigned Commits');
+
+    // 6b-2. Target branch requires signatures via repository rulesets
+    const prRules = new PRItem(makePR({
+        reviewDecision: 'APPROVED',
+        baseRef: {
+            name: 'main',
+            branchProtectionRule: null,
+            rules: {
+                nodes: [{ type: 'REQUIRED_SIGNATURES' }],
+            },
+        },
+        commits: {
+            nodes: [commitNode(null)],
+        },
+    }), viewerLogin);
+    assertEqual(prRules.category, CATEGORIES.ACTION_REQUIRED, 'Unsigned commit with ruleset categorized as ACTION_REQUIRED');
+    assert(prRules.reasons.includes('Unsigned Commits'), 'Reason includes Unsigned Commits');
+
+    // 6b-3. Invalid commit signature (isValid: false)
+    const prInvalid = new PRItem(makePR({
+        reviewDecision: 'APPROVED',
+        baseRef: {
+            name: 'main',
+            branchProtectionRule: { requiresCommitSignatures: true },
+        },
+        commits: {
+            nodes: [commitNode({ isValid: false, state: 'BAD_SIGNATURE' })],
+        },
+    }), viewerLogin);
+    assertEqual(prInvalid.category, CATEGORIES.ACTION_REQUIRED, 'Invalid commit signature categorized as ACTION_REQUIRED');
+    assert(prInvalid.reasons.includes('Unsigned Commits'), 'Reason includes Unsigned Commits');
+
+    // 6b-4. Multiple commits where one is unsigned
+    const prMixed = new PRItem(makePR({
+        reviewDecision: 'APPROVED',
+        baseRef: {
+            name: 'main',
+            rules: {
+                nodes: [{ type: 'REQUIRED_SIGNATURES' }],
+            },
+        },
+        commits: {
+            nodes: [
+                commitNode({ isValid: true, state: 'VALID' }),
+                commitNode(null),
+            ],
+        },
+    }), viewerLogin);
+    assertEqual(prMixed.category, CATEGORIES.ACTION_REQUIRED, 'PR with any unsigned commit categorized as ACTION_REQUIRED');
+    assert(prMixed.reasons.includes('Unsigned Commits'), 'Reason includes Unsigned Commits');
+
+    // 6b-5. Target branch requires signatures, all commits signed -> READY_TO_MERGE
+    const prSigned = new PRItem(makePR({
+        reviewDecision: 'APPROVED',
+        baseRef: {
+            name: 'main',
+            branchProtectionRule: { requiresCommitSignatures: true },
+        },
+        commits: {
+            nodes: [
+                commitNode({ isValid: true, state: 'VALID' }),
+                commitNode({ isValid: true, state: 'VALID' }),
+            ],
+        },
+    }), viewerLogin);
+    assertEqual(prSigned.category, CATEGORIES.READY_TO_MERGE, 'All commits signed categorized as READY_TO_MERGE');
+    assert(!prSigned.reasons.includes('Unsigned Commits'), 'Signed commits do not include Unsigned Commits');
+
+    // 6b-6. Target branch does NOT require signatures, PR has unsigned commits -> READY_TO_MERGE
+    const prNoReq = new PRItem(makePR({
+        reviewDecision: 'APPROVED',
+        baseRef: {
+            name: 'main',
+            branchProtectionRule: { requiresCommitSignatures: false },
+            rules: { nodes: [] },
+        },
+        commits: {
+            nodes: [commitNode(null)],
+        },
+    }), viewerLogin);
+    assertEqual(prNoReq.category, CATEGORIES.READY_TO_MERGE, 'Unsigned commits without signature requirement allows READY_TO_MERGE');
+    assert(!prNoReq.reasons.includes('Unsigned Commits'), 'Reason does not include Unsigned Commits when not required');
+
+    // 6b-7. Fallback: No rule info, but BLOCKED with approved review and passing checks
+    const prFallback = new PRItem(makePR({
+        reviewDecision: 'APPROVED',
+        mergeStateStatus: 'BLOCKED',
+        baseRef: { name: 'main' },
+        commits: {
+            nodes: [commitNode(null)],
+        },
+    }), viewerLogin);
+    assertEqual(prFallback.category, CATEGORIES.ACTION_REQUIRED, 'Fallback: BLOCKED approved PR with unsigned commit categorized as ACTION_REQUIRED');
+    assert(prFallback.reasons.includes('Unsigned Commits'), 'Fallback includes Unsigned Commits');
+
+    // 6b-8. Assigned PR with unsigned commits has Assigned tag
+    const prAssigned = new PRItem(makePR({
+        author: { login: 'bob' },
+        assignees: { nodes: [{ login: viewerLogin }] },
+        reviewDecision: 'APPROVED',
+        baseRef: {
+            name: 'main',
+            branchProtectionRule: { requiresCommitSignatures: true },
+        },
+        commits: {
+            nodes: [commitNode(null)],
+        },
+    }), viewerLogin);
+    assertEqual(prAssigned.category, CATEGORIES.ACTION_REQUIRED, 'Assigned PR with unsigned commit categorized as ACTION_REQUIRED');
+    assert(prAssigned.reasons.includes('Unsigned Commits'), 'Assigned PR reason includes Unsigned Commits');
+    assert(prAssigned.reasons.includes('Assigned'), 'Assigned PR reason includes Assigned');
 }
 
 // 7. Action Required: Multiple reasons simultaneously

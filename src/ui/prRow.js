@@ -25,6 +25,8 @@ function reasonToCssClass(reason) {
             return 'pr-tag-conflict';
         case 'Unresolved Comments':
             return 'pr-tag-unresolved';
+        case 'Unsigned Commits':
+            return 'pr-tag-unsigned-commits';
         case 'Approved':
             return 'pr-tag-approved';
         case 'Review Requested':

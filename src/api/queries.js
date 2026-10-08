@@ -28,7 +28,13 @@ fragment AuthoredPRDetails on PullRequest {
   baseRef {
     name
     branchProtectionRule {
+      requiresCommitSignatures
       requiredStatusCheckContexts
+    }
+    rules(first: 30) {
+      nodes {
+        type
+      }
     }
   }
   reviewRequests(first: 100) {
@@ -54,7 +60,19 @@ fragment AuthoredPRDetails on PullRequest {
       isResolved
     }
   }
-  commits(last: 1) {
+  commits(last: 100) {
+    nodes {
+      commit {
+        oid
+        signature {
+          isValid
+          state
+          wasSignedByGitHub
+        }
+      }
+    }
+  }
+  headCommit: commits(last: 1) {
     nodes {
       commit {
         checkSuites(first: 50) {
