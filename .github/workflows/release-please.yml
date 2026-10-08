@@ -1,0 +1,38 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Install GNOME packaging dependencies
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gnome-shell libglib2.0-bin
+
+      - name: Build extension zip
+        if: ${{ steps.release.outputs.release_created }}
+        run: make pack
+
+      - name: Upload extension asset to release
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ steps.release.outputs.tag_name }}" build/*.shell-extension.zip

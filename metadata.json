@@ -12,5 +12,6 @@
   ],
   "settings-schema": "org.gnome.shell.extensions.github-pr-tracker",
   "url": "https://github.com/DanielArndt/github-pr-tracker",
-  "version": 1
+  "version": 1,
+  "version-name": "0.1.0"
 }
