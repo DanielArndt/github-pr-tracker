@@ -101,6 +101,28 @@ gnome-extensions enable github-pr-tracker@dan.arndt.ca
 
 ---
 
+## Troubleshooting & Exporting Logs
+
+If you encounter issues or need to attach diagnostic logs to a bug report:
+
+1. **Via Extension Preferences**:
+   - Open preferences (click the gear icon in the dropdown menu footer, or run `gnome-extensions prefs github-pr-tracker@dan.arndt.ca`).
+   - Under the **Troubleshooting** group, click **Copy** to copy sanitized logs to your clipboard, or **Export…** to save them to a file (`github-pr-tracker.log`).
+   - *Note:* All Personal Access Tokens, keys, and authorization headers are automatically redacted from exported logs.
+
+2. **Via Command Line**:
+   - Export journal logs to a file:
+     ```bash
+     journalctl --user -b -g "GitHub PR Tracker|github-pr-tracker" --no-pager > pr-tracker.log
+     ```
+   - Follow logs live while reproducing an issue:
+     ```bash
+     journalctl --user -f -g "GitHub PR Tracker|github-pr-tracker"
+     ```
+   - Or run `make logs` from this repository checkout.
+
+---
+
 ## Development & Testing
 
 To test in a nested session without logging out:
@@ -110,10 +132,16 @@ dbus-run-session gnome-shell --devkit             # GNOME 49 and later
 dbus-run-session -- gnome-shell --nested --wayland # GNOME 45–48
 ```
 
-Run unit tests covering classification, reason calculations, filtering, and preferences:
+Run unit tests covering classification, reason calculations, filtering, preferences, and log sanitization:
 
 ```bash
 make test
+```
+
+View recent extension logs from the current session:
+
+```bash
+make logs
 ```
 
 Clean build artifacts:

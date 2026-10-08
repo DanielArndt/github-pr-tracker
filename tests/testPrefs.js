@@ -126,6 +126,40 @@ app.connect('activate', () => {
 
         console.log('✓ Successfully verified token generation link and action row!');
         console.log('✓ Successfully verified Include Assigned Pull Requests switch row!');
+
+        const troubleshootingGroup = findWidget(
+            window,
+            w => w instanceof Adw.PreferencesGroup && w.title === 'Troubleshooting'
+        );
+        if (!troubleshootingGroup) {
+            throw new Error('Troubleshooting preferences group not found in preferences window');
+        }
+
+        const exportLogsRow = findWidget(
+            window,
+            w => w instanceof Adw.ActionRow && w.title === 'Export Logs'
+        );
+        if (!exportLogsRow) {
+            throw new Error('Export Logs action row not found in preferences window');
+        }
+
+        const copyButton = findWidget(
+            exportLogsRow,
+            w => w instanceof Gtk.Button && w.label === 'Copy'
+        );
+        if (!copyButton) {
+            throw new Error('Export Logs row missing Copy button');
+        }
+
+        const exportButton = findWidget(
+            exportLogsRow,
+            w => w instanceof Gtk.Button && w.label === 'Export…'
+        );
+        if (!exportButton) {
+            throw new Error('Export Logs row missing Export… button');
+        }
+
+        console.log('✓ Successfully verified Troubleshooting group and Export Logs controls!');
         console.log('✓ Successfully initialized preferences window and all widget bindings!');
         app.quit();
     } catch (e) {

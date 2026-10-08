@@ -236,6 +236,12 @@ GNOME Shell extensions run across two distinct process environments:
 - **Line Length**: Keep line lengths reasonable (under 200 characters) to avoid horizontal scrolling in EGO review tools.
 - **Code Duplication**: Extract common logic into modular helper functions rather than duplicating code blocks.
 
+### 11. Security & Sensitive Data Prevention
+
+- **No Credential Logging**: Personal Access Tokens, API keys, passwords, and authorization headers must never be written to logs (`console.log`, `console.warn`, `console.error`), stdout/stderr, or files.
+- **Redaction & Sanitization**: Any diagnostic features (such as log exporters) must redact tokens and credentials before presenting or writing output.
+- **Keyring Storage**: All user credentials must be stored solely via `Secret` (`src/api/keyring.js`), never in GSettings or plain text files.
+
 ---
 
 ## Submitting Pull Requests

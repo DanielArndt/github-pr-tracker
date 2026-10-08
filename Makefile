@@ -14,7 +14,7 @@ SHELL_LIBDIR ?= $(firstword $(wildcard \
 	/usr/lib/gnome-shell)
 SHELL_DATADIR ?= /usr/share/gnome-shell
 
-.PHONY: all lint test compile-schemas pack install uninstall clean
+.PHONY: all lint test compile-schemas pack install uninstall clean logs
 
 all: compile-schemas test pack
 
@@ -33,6 +33,7 @@ test: compile-schemas
 	gjs -m tests/testTime.js
 	gjs -m tests/testPrNodes.js
 	gjs -m tests/testStyleVariant.js
+	gjs -m tests/testDebugLogs.js
 	GSETTINGS_BACKEND=memory \
 		GI_TYPELIB_PATH=$(SHELL_LIBDIR)/girepository-1.0 \
 		LD_LIBRARY_PATH=$(SHELL_LIBDIR) \
@@ -57,3 +58,6 @@ uninstall:
 
 clean:
 	rm -rf $(BUILD_DIR) $(SCHEMA_DIR)/gschemas.compiled
+
+logs:
+	journalctl --user -b -g "GitHub PR Tracker|github-pr-tracker" --no-pager

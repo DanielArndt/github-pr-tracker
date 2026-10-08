@@ -4,10 +4,12 @@
 import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk?version=4.0';
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 import { ExtensionPreferences } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 import * as keyring from './src/api/keyring.js';
 import { notifyTokenChanged } from './src/api/tokenSync.js';
 import { GithubClient, RequestCancelledError } from './src/api/githubClient.js';
+import { getDebugLogs } from './src/utils/debugLogs.js';
 
 export const GITHUB_NEW_TOKEN_URL =
     'https://github.com/settings/tokens/new?description=GitHub%20PR%20Tracker&scopes=repo';
@@ -20,6 +22,16 @@ export default class GitHubPRExtensionPreferences extends ExtensionPreferences {
      */
     getKeyring() {
         return keyring;
+    }
+
+    /**
+     * Diagnostic logs retriever used by the window; tests replace this to avoid
+     * querying the real system journal.
+     * @param {Object} metadata
+     * @returns {Promise<string>}
+     */
+    getDebugLogs(metadata) {
+        return getDebugLogs(metadata);
     }
 
     fillPreferencesWindow(window) {
@@ -257,5 +269,104 @@ export default class GitHubPRExtensionPreferences extends ExtensionPreferences {
         });
         settings.bind('refresh-interval', refreshRow, 'value', Gio.SettingsBindFlags.DEFAULT);
         behaviorGroup.add(refreshRow);
+
+        // --- Group 4: Troubleshooting ---
+        const debugGroup = new Adw.PreferencesGroup({
+            title: 'Troubleshooting',
+            description: 'Export diagnostic logs to share in bug reports. Sensitive tokens and credentials are automatically redacted.',
+        });
+        page.add(debugGroup);
+
+        const exportRow = new Adw.ActionRow({
+            title: 'Export Logs',
+            subtitle: 'Save extension log messages from the system journal to a file or clipboard',
+        });
+
+        const copyLogsBtn = new Gtk.Button({
+            label: 'Copy',
+            valign: Gtk.Align.CENTER,
+            tooltip_text: 'Copy logs to clipboard',
+        });
+
+        const exportLogsBtn = new Gtk.Button({
+            label: 'Export…',
+            valign: Gtk.Align.CENTER,
+            tooltip_text: 'Save logs to a file',
+        });
+
+        exportRow.add_suffix(copyLogsBtn);
+        exportRow.add_suffix(exportLogsBtn);
+        debugGroup.add(exportRow);
+
+        copyLogsBtn.connect('clicked', async () => {
+            copyLogsBtn.set_sensitive(false);
+            exportLogsBtn.set_sensitive(false);
+            try {
+                const logs = await this.getDebugLogs(this.metadata);
+                window.get_clipboard().set(logs);
+                window.add_toast(new Adw.Toast({
+                    title: 'Logs copied to clipboard',
+                }));
+            } catch (err) {
+                window.add_toast(new Adw.Toast({
+                    title: `Failed to copy logs: ${err.message}`,
+                }));
+            } finally {
+                copyLogsBtn.set_sensitive(true);
+                exportLogsBtn.set_sensitive(true);
+            }
+        });
+
+        exportLogsBtn.connect('clicked', async () => {
+            copyLogsBtn.set_sensitive(false);
+            exportLogsBtn.set_sensitive(false);
+            try {
+                const logs = await this.getDebugLogs(this.metadata);
+                const fileDialog = new Gtk.FileDialog({
+                    title: 'Export Extension Logs',
+                    initial_name: 'github-pr-tracker.log',
+                });
+
+                fileDialog.save(window, null, (dlg, res) => {
+                    try {
+                        const file = dlg.save_finish(res);
+                        const encoder = new TextEncoder();
+                        const bytes = new GLib.Bytes(encoder.encode(logs));
+                        file.replace_contents_bytes_async(
+                            bytes,
+                            null,
+                            false,
+                            Gio.FileCreateFlags.REPLACE_DESTINATION,
+                            null,
+                            (f, writeRes) => {
+                                try {
+                                    f.replace_contents_finish(writeRes);
+                                    window.add_toast(new Adw.Toast({
+                                        title: 'Logs exported successfully',
+                                    }));
+                                } catch (writeErr) {
+                                    window.add_toast(new Adw.Toast({
+                                        title: `Failed to save file: ${writeErr.message}`,
+                                    }));
+                                }
+                            }
+                        );
+                    } catch (dialogErr) {
+                        if (!dialogErr.matches(Gtk.DialogError, Gtk.DialogError.DISMISSED)) {
+                            window.add_toast(new Adw.Toast({
+                                title: `Failed to export logs: ${dialogErr.message}`,
+                            }));
+                        }
+                    }
+                });
+            } catch (err) {
+                window.add_toast(new Adw.Toast({
+                    title: `Failed to export logs: ${err.message}`,
+                }));
+            } finally {
+                copyLogsBtn.set_sensitive(true);
+                exportLogsBtn.set_sensitive(true);
+            }
+        });
     }
 }
