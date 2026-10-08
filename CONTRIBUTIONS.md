@@ -246,3 +246,18 @@ GNOME Shell extensions run across two distinct process environments:
 4. **Check Build**: Ensure `make test` and `make lint` run cleanly without errors.
 5. **Commit Messages**: Ensure all commits follow the Conventional Commits specification.
 6. **PR Description**: Clearly describe what changes were made, why they are needed, and how they were tested.
+
+---
+
+## Releases & Versioning
+
+This project uses **[Google Release Please](https://github.com/googleapis/release-please)** to automate release tracking, semantic versioning, and changelog generation.
+
+### How it Works
+
+1. **Commit-Driven Releases**: Whenever changes are merged to the `main` branch, Release Please parses all Conventional Commits since the previous release.
+2. **Release PR**: Release Please automatically creates or updates an open Release PR (e.g. `chore(main): release 0.2.0`). This PR bumps the version in `package.json`, `package-lock.json`, `metadata.json` (`version-name`), `.release-please-manifest.json`, and records the changes in `CHANGELOG.md`.
+3. **Automated Publishing & Assets**: When the Release PR is merged into `main`:
+   - Release Please tags the release and creates a GitHub Release with formatted release notes.
+   - The release workflow automatically runs `make pack` and attaches the extension zip package (`github-pr-tracker@dan.arndt.ca.shell-extension.zip`) as a release asset.
+
