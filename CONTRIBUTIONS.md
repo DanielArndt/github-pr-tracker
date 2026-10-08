@@ -244,5 +244,5 @@ GNOME Shell extensions run across two distinct process environments:
 2. **Best Practices**: Ensure all code complies with the [GNOME Extension Best Practices](#gnome-extension-best-practices--review-guidelines).
 3. **Test Coverage**: When adding features or fixing bugs, add corresponding unit tests in `tests/`.
 4. **Check Build**: Ensure `make test` and `make lint` run cleanly without errors.
-5. **Commit Messages**: Ensure all commits follow the Conventional Commits specification.
+5. **PR Titles & Commit Messages**: Ensure pull request titles and commit messages adhere to the Conventional Commits specification. An automated GitHub Actions workflow validates PR titles on creation and updates.
 6. **PR Description**: Clearly describe what changes were made, why they are needed, and how they were tested.
