@@ -60,7 +60,11 @@ This document specifies mandatory rules and operational guidelines for all AI co
   - `Soup 3.0` for networking (GraphQL API calls).
   - `Secret 1` for credential storage (keyring).
   - `Gio`, `GLib`, `St`, `Clutter` for GNOME Shell UI and system interaction.
-- **Security**: Never store tokens or sensitive credentials in plain text or GSettings. Always use the secret storage module (`src/api/keyring.js`).
+- **Security & Keyring**: Never store tokens or sensitive credentials in plain text or GSettings. Always use the secret storage module (`src/api/keyring.js`).
+- **No Sensitive Data Logging (MANDATORY)**: Never log sensitive information—including Personal Access Tokens, API keys, passwords, authorization headers, or private credentials—to stdout, stderr, systemd journal, or files.
+  - When invoking `console.log()`, `console.warn()`, `console.error()`, or GLib logging APIs, never interpolate tokens or credential-bearing objects/headers.
+  - Keep error messages high-level and sanitized (e.g., report status codes or standard error reasons without dumping raw request headers or payloads).
+  - Any diagnostic export tool or command that collects or displays logs must sanitize and redact sensitive credential patterns (e.g. `ghp_*`, `gho_*`, `ghu_*`, `ghs_*`, `ghr_*`, `github_pat_*`, `Bearer *`, or URL token parameters) before presentation or file export.
 
 ---
 
