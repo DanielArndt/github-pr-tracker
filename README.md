@@ -58,9 +58,21 @@ categories with precise status reason badges.
 - `libsecret-1` (GNOME Keyring)
 - `libsoup-3.0`
 
-### Building & Installing
+### Option 1: Install Latest Release (Recommended)
 
-Clone the repository and run:
+Download and install the pre-packaged extension bundle from the [latest release](https://github.com/DanielArndt/github-pr-tracker/releases/latest):
+
+```bash
+curl -LO https://github.com/DanielArndt/github-pr-tracker/releases/latest/download/github-pr-tracker@dan.arndt.ca.shell-extension.zip
+gnome-extensions install --force github-pr-tracker@dan.arndt.ca.shell-extension.zip
+rm -f github-pr-tracker@dan.arndt.ca.shell-extension.zip
+```
+
+> The download URL automatically resolves to the latest release bundle without needing version-specific updates. You can also download `github-pr-tracker@dan.arndt.ca.shell-extension.zip` manually from the [latest release page](https://github.com/DanielArndt/github-pr-tracker/releases/latest) in your browser and run `gnome-extensions install --force <path-to-zip>`.
+
+### Option 2: Install from Source (`main` / Development)
+
+Clone the repository and install using `make`:
 
 ```bash
 git clone https://github.com/DanielArndt/github-pr-tracker.git
@@ -69,6 +81,15 @@ make install
 ```
 
 This compiles GSettings schemas, packages the extension, installs it to `~/.local/share/gnome-shell/extensions/github-pr-tracker@dan.arndt.ca`, and compiles schemas in place.
+
+To build from the latest tagged release instead of `main`, check out the latest tag before running `make install`:
+
+```bash
+git checkout $(git describe --tags --abbrev=0)
+make install
+```
+
+### Enabling the Extension
 
 After installing for the first time, log out and log back in so GNOME Shell picks up the new extension. GNOME Shell cannot be restarted in place on Wayland.
 
