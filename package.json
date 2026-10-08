@@ -1,6 +1,6 @@
 {
   "name": "github-pr-tracker",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Development tooling for the GitHub PR Tracker GNOME Shell extension",
   "license": "GPL-2.0-or-later",
