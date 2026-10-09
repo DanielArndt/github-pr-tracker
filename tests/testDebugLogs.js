@@ -101,6 +101,27 @@ assert(output.includes('UUID: test-uuid@example.com'), 'Includes metadata UUID i
 assert(output.includes('Version: 42'), 'Includes metadata version in header');
 assert(output.includes('Timestamp: '), 'Includes ISO timestamp in header');
 
+const testMetadataBoth = {
+    uuid: 'test-uuid@example.com',
+    version: 42,
+    'version-name': '1.2.3',
+};
+const outputBoth = await getDebugLogs(testMetadataBoth);
+assert(outputBoth.includes('Version: 42'), 'Uses version when both version and version-name exist');
+
+const testMetadataVersionName = {
+    uuid: 'test-uuid@example.com',
+    'version-name': '0.1.0',
+};
+const outputVersionName = await getDebugLogs(testMetadataVersionName);
+assert(outputVersionName.includes('Version: 0.1.0'), 'Falls back to version-name when version is not present');
+
+const testMetadataNeither = {
+    uuid: 'test-uuid@example.com',
+};
+const outputNeither = await getDebugLogs(testMetadataNeither);
+assert(outputNeither.includes('Version: unknown'), 'Falls back to unknown when neither version nor version-name is present');
+
 // Verify that getDebugLogs sanitizes any output
 assert(!output.includes('ghp_'), 'Does not contain any unredacted ghp_ tokens');
 assert(!output.includes('github_pat_'), 'Does not contain any unredacted github_pat_ tokens');
