@@ -24,13 +24,13 @@ export function sanitizeLogContent(text) {
  * Retrieves diagnostic logs from the systemd journal for this extension.
  * Output is guaranteed to have sensitive credentials redacted.
  *
- * @param {Object} [metadata] extension metadata containing uuid and version
+ * @param {Object} [metadata] extension metadata containing uuid, version, and/or version-name
  * @returns {Promise<string>}
  */
 export async function getDebugLogs(metadata = {}) {
     const timestamp = new Date().toISOString();
     const uuid = metadata?.uuid || 'github-pr-tracker@dan.arndt.ca';
-    const version = metadata?.version ?? 'unknown';
+    const version = metadata?.version ?? metadata?.['version-name'] ?? 'unknown';
 
     const header = [
         '=== GitHub PR Tracker Debug Logs ===',
