@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/DanielArndt/github-pr-tracker/compare/v0.1.0...v0.2.0) (2026-10-09)
+
+
+### Features
+
+* **classifier:** show prs with unsigned commits in action required ([#1](https://github.com/DanielArndt/github-pr-tracker/issues/1)) ([e7b2a82](https://github.com/DanielArndt/github-pr-tracker/commit/e7b2a829ceeac788380170df196125a52a47423e))
+* **prefs:** add export logs button and redact sensitive credentials ([#2](https://github.com/DanielArndt/github-pr-tracker/issues/2)) ([30f27e9](https://github.com/DanielArndt/github-pr-tracker/commit/30f27e9147e668cf6a0c12d51332bd1fb392908d))
+
+
+### Bug Fixes
+
+* omit version from metadata and fall back to version-name in logs ([#13](https://github.com/DanielArndt/github-pr-tracker/issues/13)) ([045f31c](https://github.com/DanielArndt/github-pr-tracker/commit/045f31c63e7d8153c3e0b63606e2ea5f415317e9))
+
 ## 0.1.0 (2026-10-08)
 
 
