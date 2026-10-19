@@ -270,6 +270,13 @@ export default class GitHubPRExtensionPreferences extends ExtensionPreferences {
         settings.bind('refresh-interval', refreshRow, 'value', Gio.SettingsBindFlags.DEFAULT);
         behaviorGroup.add(refreshRow);
 
+        const notifyRow = new Adw.SwitchRow({
+            title: 'Notify on Category Changes',
+            subtitle: 'Show a desktop notification when a pull request moves between categories',
+        });
+        settings.bind('notify-on-transition', notifyRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        behaviorGroup.add(notifyRow);
+
         // --- Group 4: Troubleshooting ---
         const debugGroup = new Adw.PreferencesGroup({
             title: 'Troubleshooting',
