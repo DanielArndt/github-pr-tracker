@@ -31,6 +31,7 @@ test: compile-schemas
 	GSETTINGS_BACKEND=memory gjs -m tests/testTokenSync.js
 	gjs -m tests/testGithubClient.js
 	gjs -m tests/testTime.js
+	gjs -m tests/testTransitions.js
 	gjs -m tests/testPrNodes.js
 	gjs -m tests/testStyleVariant.js
 	gjs -m tests/testDebugLogs.js

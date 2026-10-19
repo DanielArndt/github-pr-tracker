@@ -8,6 +8,15 @@
       <description>Time in minutes between background polling of GitHub PR data.</description>
     </key>
 
+    <key name="notify-on-transition" type="b">
+      <default>true</default>
+      <summary>Notify on category changes</summary>
+      <description>
+        Show a desktop notification when a pull request moves between categories,
+        for example from Pending Checks to Ready to Merge.
+      </description>
+    </key>
+
     <key name="include-repos" type="s">
       <default>""</default>
       <summary>Repositories to include</summary>

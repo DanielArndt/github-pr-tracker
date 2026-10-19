@@ -20,12 +20,18 @@ import {
     pruneMissingKeys,
     categorizeAndPruneDismissed,
 } from './src/models/dismissTracker.js';
+import {
+    snapshotCategories,
+    detectTransitions,
+    describeTransitions,
+} from './src/models/transitionTracker.js';
 
 export default class GitHubPRExtension extends Extension {
     enable() {
         this._settings = this.getSettings();
         this._rawNodes = [];
         this._rawPRItems = [];
+        this._lastCategories = null;
         this._viewerLogin = this._settings.get_string('last-username') || '';
 
         this._repoFilter = new RepoFilter({
@@ -101,6 +107,7 @@ export default class GitHubPRExtension extends Extension {
         this._repoFilter = null;
         this._rawNodes = [];
         this._rawPRItems = [];
+        this._lastCategories = null;
     }
 
     /**
@@ -109,6 +116,7 @@ export default class GitHubPRExtension extends Extension {
     _clearData() {
         this._rawNodes = [];
         this._rawPRItems = [];
+        this._lastCategories = null;
         this._indicator.updateCounts(new Map());
         this._indicator.menuView.setLastUpdated(null);
     }
@@ -351,6 +359,23 @@ export default class GitHubPRExtension extends Extension {
             this._saveMaps(snoozed, dismissed);
         }
 
+        this._notifyTransitions(categorizedMap);
         this._indicator.updateCounts(categorizedMap);
+    }
+
+    /**
+     * Sends a desktop notification for PRs that changed category since the
+     * previous display. The first display only records a baseline.
+     * @param {Map<string, Array<PRItem>>} categorizedMap
+     */
+    _notifyTransitions(categorizedMap) {
+        const previous = this._lastCategories;
+        this._lastCategories = snapshotCategories(categorizedMap);
+        if (!previous || !this._settings.get_boolean('notify-on-transition')) return;
+
+        const transitions = detectTransitions(previous, categorizedMap);
+        if (transitions.length === 0) return;
+        const { title, body } = describeTransitions(transitions);
+        Main.notify(title, body);
     }
 }
