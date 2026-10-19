@@ -325,6 +325,25 @@ function withChecks({ rollupState, contexts, required = null, mergeStateStatus, 
     assertEqual(pr.reasons, ['Approved'], 'Reason is Approved');
 }
 
+// 4l. Null rollup with check suites that never report, but GitHub says CLEAN
+{
+    const pr = new PRItem(makePR({
+        reviewDecision: 'APPROVED',
+        statusCheckRollup: null,
+        mergeStateStatus: 'CLEAN',
+        commits: {
+            nodes: [{
+                commit: {
+                    checkSuites: {
+                        nodes: [checkSuite(null, 'QUEUED'), checkSuite(null, 'QUEUED')],
+                    },
+                },
+            }],
+        },
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.READY_TO_MERGE, 'CLEAN PR with stale queued check suites is READY_TO_MERGE');
+}
+
 // 5. Action Required: Merge Conflicts
 {
     const pr = new PRItem(makePR({ mergeable: 'CONFLICTING' }), viewerLogin);

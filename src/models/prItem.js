@@ -241,15 +241,14 @@ function areRequiredChecksPassing(rawNode) {
     }
 
     const { rollup, checkSuites, contexts, required } = getCheckData(rawNode);
-    if (!rollup || rollup.state === 'SUCCESS') {
-        if (!rollup && checkSuites.length > 0) {
-            return false;
-        }
+    // GitHub reports CLEAN when nothing blocks the merge. Check suites from apps that
+    // never report a result (e.g. Codecov) can stay QUEUED forever without a rollup.
+    if (rawNode.mergeStateStatus === 'CLEAN' || rawNode.mergeStateStatus === 'HAS_HOOKS') {
         return true;
     }
 
-    if (rawNode.mergeStateStatus === 'CLEAN' || rawNode.mergeStateStatus === 'HAS_HOOKS') {
-        return true;
+    if (!rollup || rollup.state === 'SUCCESS') {
+        return rollup !== null || checkSuites.length === 0;
     }
 
     // Every required check must have reported and passed
