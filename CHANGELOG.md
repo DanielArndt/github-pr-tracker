@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/DanielArndt/github-pr-tracker/compare/v0.2.0...v0.3.0) (2026-10-19)
+
+
+### Features
+
+* **notifications:** notify when a pr changes category ([#16](https://github.com/DanielArndt/github-pr-tracker/issues/16)) ([b2ebafc](https://github.com/DanielArndt/github-pr-tracker/commit/b2ebafc8cefcedfd755a8b657830db3649c3248e))
+
+
+### Bug Fixes
+
+* **classifier:** treat clean prs with stale queued check suites as ready ([#15](https://github.com/DanielArndt/github-pr-tracker/issues/15)) ([7185548](https://github.com/DanielArndt/github-pr-tracker/commit/7185548acfce4dc5f3ac41066f7c686ede188981))
+
 ## [0.2.0](https://github.com/DanielArndt/github-pr-tracker/compare/v0.1.0...v0.2.0) (2026-10-09)
 
 
