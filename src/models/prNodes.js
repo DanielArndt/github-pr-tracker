@@ -8,7 +8,7 @@
  */
 
 /**
- * Collects the unique PR nodes from a FETCH_ALL_PRS_QUERY response.
+ * Collects the unique PR nodes from a fetchAllPRs response.
  *
  * A PR can appear in multiple lists (authored search, review-requested search,
  * or assigned search); properties are merged with later occurrences taking
