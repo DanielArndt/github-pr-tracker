@@ -1,7 +1,7 @@
 name: Conventional Commits
 
 on:
-  pull_request_target:
+  pull_request:
     types:
       - opened
       - edited
@@ -9,30 +9,26 @@ on:
       - reopened
       - ready_for_review
 
-permissions:
-  pull-requests: read
+permissions: {}
 
 jobs:
   validate-pr-title:
     name: Validate PR Title
     runs-on: ubuntu-24.04
     steps:
-      - uses: amannn/action-semantic-pull-request@2252a14e810aa9b85c2d560bd7070c802206ecf6 # v6.1.2
+      - name: Validate conventional commit title
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          types: |
-            feat
-            fix
-            docs
-            style
-            refactor
-            perf
-            test
-            build
-            ci
-            chore
-            revert
-          subjectPattern: ^(?![A-Z]).*[^.]$
-          subjectPatternError: |
-            The subject "{subject}" found in pull request title "{title}" must start with a lowercase letter and must not end with a period.
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          LC_ALL: C
+        run: |
+          pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([^()]+\))?!?: (.+)$'
+          if [[ "$PR_TITLE" == *$'\n'* || "$PR_TITLE" == *$'\r'* || ! "$PR_TITLE" =~ $pattern ]]; then
+            printf '%s\n' '::error::PR title must use type(scope): subject or type: subject, with an optional ! for breaking changes.'
+            exit 1
+          fi
+          subject="${BASH_REMATCH[3]}"
+          if [[ "$subject" == [A-Z]* || "$subject" == *. ]]; then
+            printf '%s\n' '::error::PR title subject must not start with an uppercase letter or end with a period.'
+            exit 1
+          fi

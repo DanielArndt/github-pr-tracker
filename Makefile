@@ -35,6 +35,7 @@ test: compile-schemas
 	gjs -m tests/testPrNodes.js
 	gjs -m tests/testStyleVariant.js
 	gjs -m tests/testDebugLogs.js
+	gjs -m tests/testPrTitle.js
 	GSETTINGS_BACKEND=memory \
 		GI_TYPELIB_PATH=$(SHELL_LIBDIR)/girepository-1.0 \
 		LD_LIBRARY_PATH=$(SHELL_LIBDIR) \
