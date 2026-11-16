@@ -285,9 +285,19 @@ export class GithubClient {
 
         try {
             for (let attempt = 0; ; attempt++) {
+                if (cancellable.is_cancelled()) {
+                    throw new RequestCancelledError();
+                }
                 try {
-                    return await this._sendOnce(queryString, variables, token, cancellable);
+                    const result = await this._sendOnce(queryString, variables, token, cancellable);
+                    if (cancellable.is_cancelled()) {
+                        throw new RequestCancelledError();
+                    }
+                    return result;
                 } catch (e) {
+                    if (cancellable.is_cancelled()) {
+                        throw new RequestCancelledError();
+                    }
                     const transient = e instanceof ApiHttpError &&
                         e.statusCode >= 500 && e.statusCode < 600 &&
                         attempt < MAX_RETRIES;
@@ -327,10 +337,9 @@ export class GithubClient {
      * @param {string} queryString GraphQL query taking an `$after` cursor
      * @param {string} bucket field name of the search connection in the response
      * @param {Gio.Cancellable} cancellable shared by the whole refresh cycle
-     * @param {boolean} [withViewer=false] whether the query also returns `viewer`
      * @returns {Promise<{connection: Object, errors: Array, fatalError: Error|null, viewer: Object|null}>}
      */
-    async _fetchBucket(queryString, bucket, cancellable, withViewer = false) {
+    async _fetchBucket(queryString, bucket, cancellable) {
         const nodes = [];
         const errors = [];
         let viewer = null;
@@ -343,11 +352,15 @@ export class GithubClient {
                 const variables = cursor ? { after: cursor } : {};
                 const { data, errors: pageErrors } =
                     await this.executeQuery(queryString, variables, null, cancellable);
-                if (withViewer && data.viewer) {
+                if (data.viewer) {
                     viewer = data.viewer;
                 }
                 errors.push(...pageErrors);
                 const connection = data[bucket];
+                if (!connection) {
+                    hasNextPage = true;
+                    throw new Error(`GitHub did not return the ${bucket} pull request list.`);
+                }
                 nodes.push(...(connection?.nodes || []).filter(Boolean));
                 hasNextPage = !!connection?.pageInfo?.hasNextPage;
                 cursor = connection?.pageInfo?.endCursor;
@@ -395,7 +408,7 @@ export class GithubClient {
 
         try {
             const buckets = await Promise.all([
-                this._fetchBucket(AUTHORED_PRS_QUERY, 'authored', cancellable, true),
+                this._fetchBucket(AUTHORED_PRS_QUERY, 'authored', cancellable),
                 this._fetchBucket(REVIEW_REQUESTED_PRS_QUERY, 'reviewRequested', cancellable),
                 this._fetchBucket(ASSIGNED_PRS_QUERY, 'assigned', cancellable),
             ]);
@@ -418,8 +431,9 @@ export class GithubClient {
             data.authored = buckets[0].connection;
             data.reviewRequested = buckets[1].connection;
             data.assigned = buckets[2].connection;
-            if (buckets[0].viewer !== null) {
-                data.viewer = buckets[0].viewer;
+            const identity = buckets.find(bucket => bucket.viewer !== null);
+            if (identity) {
+                data.viewer = identity.viewer;
             }
 
             return { data, errors };

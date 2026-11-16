@@ -183,6 +183,9 @@ export const REVIEW_REQUESTED_PRS_QUERY = `
 ${SEARCH_PR_FRAGMENT}
 
 query ReviewRequestedPullRequests($after: String) {
+  viewer {
+    login
+  }
   reviewRequested: search(query: "type:pr state:open review-requested:@me sort:updated-desc", type: ISSUE, first: ${PRS_PER_PAGE}, after: $after) {
     pageInfo {
       hasNextPage
@@ -201,6 +204,9 @@ export const ASSIGNED_PRS_QUERY = `
 ${AUTHORED_PR_FRAGMENT}
 
 query AssignedPullRequests($after: String) {
+  viewer {
+    login
+  }
   assigned: search(query: "type:pr state:open assignee:@me sort:updated-desc", type: ISSUE, first: ${PRS_PER_PAGE}, after: $after) {
     pageInfo {
       hasNextPage

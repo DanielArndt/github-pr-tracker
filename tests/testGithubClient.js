@@ -160,6 +160,39 @@ const okBody = fields => JSON.stringify({ data: fields });
     assert(result.data.viewer.login === 'octocat', 'Retried request returns the successful response');
 }
 
+// A queued 5xx completion after destroy must not resurrect a retry source
+{
+    const client = makeClient();
+    const session = client._session;
+    const pending = client.executeQuery('query { a }');
+    client.destroy();
+    session.finishResponse(0, { status: 502, reason: 'Bad Gateway', retryAfter: 1 });
+    assert((await settle(pending)) instanceof RequestCancelledError,
+        'Queued HTTP failure after destroy rejects as cancellation immediately');
+    assert(client._retrySources.size === 0, 'Queued HTTP failure cannot create a retry after destroy');
+    client.cancelPending();
+    await settle(pending);
+}
+
+// A queued success cannot start another page of a cancelled cycle
+{
+    const client = makeClient();
+    const session = client._session;
+    const pending = client._fetchBucket('query { a }', 'authored', new Gio.Cancellable());
+    session.requests[0].cancellable.cancel();
+    session.finishResponse(0, {
+        status: 200,
+        body: okBody({ authored: { nodes: [], pageInfo: { hasNextPage: true, endCursor: 'NEXT' } } }),
+    });
+    assert((await settle(pending)) instanceof RequestCancelledError,
+        'Queued successful page after cancellation rejects immediately');
+    assert(session.requests.length === 1, 'Cancelled cycle cannot start its next page');
+    if (session.requests.length > 1) {
+        session.finishCancelled(1);
+        await settle(pending);
+    }
+}
+
 // Non-retryable HTTP errors are not retried
 {
     const client = makeClient();
@@ -217,6 +250,33 @@ const okBody = fields => JSON.stringify({ data: fields });
         'Failed bucket contributes no nodes');
     assert(result.errors.length === 1 && result.errors[0].message.includes('403'),
         'Failed bucket is reported as a non-fatal error');
+}
+
+// Every bucket can supply identity when the authored request fails
+{
+    const client = makeClient();
+    const session = client._session;
+    const pending = client.fetchAllPRs();
+    assert(session.requests.every(req => /viewer\s*\{\s*login\s*\}/.test(JSON.parse(req.body).query)),
+        'All bucket queries request the authenticated viewer');
+    session.finishResponse(0, { status: 403, reason: 'Forbidden' });
+    session.finishResponse(1, {
+        status: 200,
+        body: okBody({
+            viewer: { login: 'new-account' },
+            reviewRequested: { nodes: [], pageInfo: { hasNextPage: false } },
+        }),
+    });
+    session.finishResponse(2, {
+        status: 200,
+        body: okBody({
+            viewer: { login: 'new-account' },
+            assigned: { nodes: [], pageInfo: { hasNextPage: false } },
+        }),
+    });
+    const result = await pending;
+    assert(result.data.viewer?.login === 'new-account',
+        'Surviving buckets supply identity even without authored results');
 }
 
 // fetchAllPRs paginates buckets whose first page reports more results
@@ -301,6 +361,38 @@ const okBody = fields => JSON.stringify({ data: fields });
     assert(result.data.authored.nodes.length === 3, 'All fetched pages are kept');
     assert(result.data.authored.pageInfo.hasNextPage === true,
         'Truncation is reported when more pages exist beyond the cap');
+}
+
+// A null follow-up connection must not erase the truncation warning
+{
+    const client = makeClient();
+    const session = client._session;
+    const pending = client._fetchBucket('query { a }', 'authored', new Gio.Cancellable());
+    session.finishResponse(0, {
+        status: 200,
+        body: okBody({ authored: { nodes: [{ id: 'PR_1' }], pageInfo: { hasNextPage: true, endCursor: 'NEXT' } } }),
+    });
+    await waitFor(() => session.requests.length === 2);
+    session.finishResponse(1, {
+        status: 200,
+        body: JSON.stringify({ data: { authored: null }, errors: [{ message: 'Search unavailable' }] }),
+    });
+    const result = await pending;
+    assert(result.connection.pageInfo.hasNextPage, 'Null follow-up page preserves the incomplete-list warning');
+    assert(result.connection.nodes.length === 1, 'Null follow-up page retains the loaded nodes');
+    assert(result.errors.length > 0, 'Null follow-up page remains a partial failure');
+}
+
+// Even a null connection without GraphQL errors must not be treated as an empty list
+{
+    const client = makeClient();
+    const session = client._session;
+    const pending = client._fetchBucket('query { a }', 'assigned', new Gio.Cancellable());
+    session.finishResponse(0, { status: 200, body: okBody({ assigned: null }) });
+    const result = await pending;
+    assert(result.errors.length > 0 && result.fatalError !== null,
+        'Null initial connection reports a bucket failure rather than successful emptiness');
+    assert(result.connection.pageInfo.hasNextPage, 'Null initial connection reports an incomplete list');
 }
 
 // fetchAllPRs throws when every bucket fails
