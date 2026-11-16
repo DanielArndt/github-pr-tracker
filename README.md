@@ -23,7 +23,8 @@ categories with precise status reason badges.
     - Review was requested directly from you (including author re-requests on previously reviewed PRs)
     - Review was requested from your team (when team review is enabled in preferences and you have not already reviewed it)
   - ✓ **Ready to Merge**: Approved pull requests authored by you (or assigned to you) with passing required CI checks and no conflicts.
-  - ⏳ **Waiting on Review**: Open, non-draft pull requests authored by you (or assigned to you) that are awaiting review from others.
+  - **Pending Checks**: Non-draft pull requests authored by you (or assigned to you) with required checks still running, missing, or awaiting workflow approval. Takes precedence over waiting for review; reason pills show both `Pending Checks` and `Awaiting Review` when applicable. Failed required checks remain in **Action Required**.
+  - ⏳ **Waiting on Review**: Open, non-draft pull requests authored by you (or assigned to you) with passing required checks that are awaiting review from others.
   - 📝 **Draft PRs**: Open draft pull requests authored by you (or assigned to you).
 - **Informative PR Cards**:
   - Displays Repository (`owner/repo`), PR number (`#123`), Title, Author, and time elapsed.
