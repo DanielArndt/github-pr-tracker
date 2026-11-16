@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.2](https://github.com/DanielArndt/github-pr-tracker/compare/v0.3.1...v0.3.2) (2026-11-16)
+
+
+### Bug Fixes
+
+* **classifier:** show relevant status badges on draft PRs ([#24](https://github.com/DanielArndt/github-pr-tracker/issues/24)) ([5387a33](https://github.com/DanielArndt/github-pr-tracker/commit/5387a33cc5f66c1e89cc0c4b13e436931d62a514))
+* **graphql:** paginate PR queries to avoid gateway timeouts ([#27](https://github.com/DanielArndt/github-pr-tracker/issues/27)) ([856ca64](https://github.com/DanielArndt/github-pr-tracker/commit/856ca6465c08ff2ad0e3a734ba3070e820307ae9))
+
 ## [0.3.1](https://github.com/DanielArndt/github-pr-tracker/compare/v0.3.0...v0.3.1) (2026-11-16)
 
 
