@@ -115,6 +115,142 @@ function withChecks({ rollupState, contexts, required = null, mergeStateStatus, 
     });
 }
 
+// Drafts retain their category while exposing failing required checks
+{
+    for (const assigned of [false, true]) {
+        for (const ctx of [checkRun('unit-tests', 'FAILURE'), statusContext('unit-tests', 'ERROR')]) {
+            const pr = new PRItem(withChecks({
+                isDraft: true,
+                author: { login: assigned ? 'bob' : viewerLogin },
+                assignees: { nodes: assigned ? [{ login: viewerLogin }] : [] },
+                rollupState: 'FAILURE',
+                required: ['unit-tests'],
+                mergeStateStatus: 'DRAFT',
+                contexts: [ctx],
+            }), viewerLogin);
+            const label = `${assigned ? 'Assigned' : 'Authored'} draft with failing ${ctx.__typename}`;
+            assertEqual(pr.category, CATEGORIES.DRAFT, `${label} stays in DRAFT`);
+            assertEqual(pr.reasons, assigned ? ['Draft', 'CI Failed', 'Assigned'] : ['Draft', 'CI Failed'], `${label} has CI Failed badge`);
+        }
+    }
+}
+
+// Drafts expose pending required checks without changing category
+{
+    for (const assigned of [false, true]) {
+        for (const contexts of [
+            [],
+            [checkRun('unit-tests', null, 'QUEUED')],
+            [checkRun('unit-tests', null, 'IN_PROGRESS')],
+            [statusContext('unit-tests', 'PENDING')],
+        ]) {
+            const pr = new PRItem(withChecks({
+                isDraft: true,
+                author: { login: assigned ? 'bob' : viewerLogin },
+                assignees: { nodes: assigned ? [{ login: viewerLogin }] : [] },
+                rollupState: 'PENDING',
+                required: ['unit-tests'],
+                mergeStateStatus: 'DRAFT',
+                contexts,
+            }), viewerLogin);
+            assertEqual(pr.category, CATEGORIES.DRAFT, 'Draft with pending required checks stays in DRAFT');
+            assertEqual(pr.reasons, assigned ? ['Draft', 'Pending Checks', 'Assigned'] : ['Draft', 'Pending Checks'], 'Draft with pending required checks has Pending Checks badge');
+        }
+    }
+}
+
+// Passing, pending, missing and optional checks do not add a failure badge to drafts
+{
+    for (const contexts of [
+        [],
+        [checkRun('unit-tests', 'SUCCESS')],
+        [checkRun('unit-tests', null, 'IN_PROGRESS')],
+        [checkRun('unit-tests', 'SUCCESS'), checkRun('optional-linter', 'FAILURE')],
+    ]) {
+        const pr = new PRItem(withChecks({
+            isDraft: true,
+            rollupState: 'FAILURE',
+            required: ['unit-tests'],
+            mergeStateStatus: 'DRAFT',
+            contexts,
+        }), viewerLogin);
+        assertEqual(pr.category, CATEGORIES.DRAFT, 'Draft without required check failure stays in DRAFT');
+        assert(!pr.reasons.includes('CI Failed'), 'Draft without required check failure has no CI Failed badge');
+        if (contexts.some(ctx => ctx.conclusion === 'SUCCESS')) {
+            assertEqual(pr.reasons, ['Draft'], 'Draft with passing required checks has no Pending Checks badge');
+        }
+    }
+}
+
+// Drafts expose merge conflicts for authored and assigned PRs
+{
+    for (const assigned of [false, true]) {
+        const pr = new PRItem(makePR({
+            isDraft: true,
+            mergeable: 'CONFLICTING',
+            author: { login: assigned ? 'bob' : viewerLogin },
+            assignees: { nodes: assigned ? [{ login: viewerLogin }] : [] },
+        }), viewerLogin);
+        assertEqual(pr.category, CATEGORIES.DRAFT, 'Conflicting draft stays in DRAFT');
+        assertEqual(pr.reasons, assigned ? ['Draft', 'Conflicts', 'Assigned'] : ['Draft', 'Conflicts'], 'Conflicting draft has Conflicts badge');
+    }
+}
+
+// Drafts explain workflows awaiting approval, even before a rollup exists
+{
+    for (const assigned of [false, true]) {
+        for (const workflow of [
+            { statusCheckRollup: null, headCommit: { nodes: [{ commit: { checkSuites: { nodes: [checkSuite('ACTION_REQUIRED')] } } }] } },
+            { statusCheckRollup: { state: 'PENDING', contexts: { nodes: [checkRun('tests', null, 'WAITING')] } } },
+        ]) {
+            const pr = new PRItem(makePR({
+                isDraft: true,
+                mergeStateStatus: 'DRAFT',
+                author: { login: assigned ? 'bob' : viewerLogin },
+                assignees: { nodes: assigned ? [{ login: viewerLogin }] : [] },
+                ...workflow,
+            }), viewerLogin);
+            assertEqual(pr.category, CATEGORIES.DRAFT, 'Draft awaiting workflow approval stays in DRAFT');
+            assertEqual(
+                pr.reasons,
+                assigned ? ['Draft', 'Pending Checks', 'Awaiting Workflow Approval', 'Assigned'] : ['Draft', 'Pending Checks', 'Awaiting Workflow Approval'],
+                'Draft explains pending workflow approval'
+            );
+        }
+    }
+}
+
+// Drafts expose unsigned or invalid signatures only when signatures are required
+{
+    for (const assigned of [false, true]) {
+        for (const baseRef of [
+            { branchProtectionRule: { requiresCommitSignatures: true } },
+            { branchProtectionRule: null, rules: { nodes: [{ type: 'REQUIRED_SIGNATURES' }] } },
+        ]) {
+            for (const signature of [null, { isValid: false }]) {
+                const pr = new PRItem(makePR({
+                    isDraft: true,
+                    mergeStateStatus: 'DRAFT',
+                    author: { login: assigned ? 'bob' : viewerLogin },
+                    assignees: { nodes: assigned ? [{ login: viewerLogin }] : [] },
+                    baseRef,
+                    commits: { nodes: [commitNode({ isValid: true }), commitNode(signature)] },
+                }), viewerLogin);
+                assertEqual(pr.category, CATEGORIES.DRAFT, 'Draft with required signature issue stays in DRAFT');
+                assertEqual(pr.reasons, assigned ? ['Draft', 'Unsigned Commits', 'Assigned'] : ['Draft', 'Unsigned Commits'], 'Draft exposes required signature issue');
+            }
+        }
+    }
+    for (const overrides of [
+        { baseRef: { branchProtectionRule: { requiresCommitSignatures: false }, rules: { nodes: [] } }, commits: { nodes: [commitNode(null)] } },
+        { baseRef: { branchProtectionRule: { requiresCommitSignatures: true } }, commits: { nodes: [commitNode({ isValid: true })] } },
+        { baseRef: { branchProtectionRule: { requiresCommitSignatures: true } }, commits: { nodes: [] } },
+    ]) {
+        const pr = new PRItem(makePR({ isDraft: true, mergeStateStatus: 'DRAFT', ...overrides }), viewerLogin);
+        assertEqual(pr.reasons, ['Draft'], 'Draft without required signature issue has no Unsigned Commits badge');
+    }
+}
+
 // 3. Action Required: Failing required CI check (branch protection lists it)
 {
     const pr = new PRItem(withChecks({

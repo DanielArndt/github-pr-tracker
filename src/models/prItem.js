@@ -329,6 +329,20 @@ export class PRItem {
             // Strictly Drafts
             if (this.isDraft) {
                 this.reasons.push('Draft');
+                if (hasFailingRequiredChecks(rawNode)) {
+                    this.reasons.push('CI Failed');
+                } else if (!areRequiredChecksPassing(rawNode)) {
+                    this.reasons.push('Pending Checks');
+                }
+                if (isAwaitingWorkflowApproval(rawNode)) {
+                    this.reasons.push('Awaiting Workflow Approval');
+                }
+                if (this.mergeable === 'CONFLICTING') {
+                    this.reasons.push('Conflicts');
+                }
+                if (hasUnsignedCommits(rawNode)) {
+                    this.reasons.push('Unsigned Commits');
+                }
                 if (!this.isAuthoredByViewer) {
                     this.reasons.push('Assigned');
                 }
