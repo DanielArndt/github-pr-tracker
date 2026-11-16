@@ -247,16 +247,16 @@ function areRequiredChecksPassing(rawNode) {
         return true;
     }
 
-    if (!rollup || rollup.state === 'SUCCESS') {
-        return rollup !== null || checkSuites.length === 0;
-    }
-
     // Every required check must have reported and passed
     if (required.length > 0) {
         return required.every(name => {
             const ctx = contexts.find(c => contextName(c) === name);
             return !!ctx && isContextPassing(ctx);
         });
+    }
+
+    if (!rollup || rollup.state === 'SUCCESS') {
+        return rollup !== null || checkSuites.length === 0;
     }
 
     // UNSTABLE means mergeable with non-passing commit status (i.e. only optional checks failed)
@@ -387,9 +387,9 @@ export class PRItem {
                 return CATEGORIES.READY_TO_MERGE;
             }
 
-            // F. Pending Checks (Review complete/approved, but checks not yet passing)
-            if (isApproved) {
-                const pendingReasons = ['Approved'];
+            // F. Pending Checks take precedence over an outstanding review
+            if (!ciPassing) {
+                const pendingReasons = ['Pending Checks', isApproved ? 'Approved' : 'Awaiting Review'];
                 if (isAwaitingWorkflowApproval(rawNode)) {
                     pendingReasons.push('Awaiting Workflow Approval');
                 }
@@ -402,10 +402,6 @@ export class PRItem {
 
             // G. Waiting on Review
             const waitingReasons = ['Awaiting Review'];
-
-            if (isAwaitingWorkflowApproval(rawNode)) {
-                waitingReasons.push('Awaiting Workflow Approval');
-            }
 
             if (!this.isAuthoredByViewer) {
                 waitingReasons.push('Assigned');
