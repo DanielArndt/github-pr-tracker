@@ -326,6 +326,12 @@ export class PRItem {
 
         // 1. User's Own PRs (or Assigned PRs where user takes ownership)
         if (isOwned) {
+            // SearchPRDetails omits owned-PR inputs. If the detailed bucket
+            // failed or was capped before this PR, do not infer a category
+            // from absent fields. A null reviewDecision is valid; omission is not.
+            if (!Object.hasOwn(rawNode, 'reviewDecision')) {
+                return null;
+            }
             // Strictly Drafts
             if (this.isDraft) {
                 this.reasons.push('Draft');

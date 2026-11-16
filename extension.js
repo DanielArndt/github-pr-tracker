@@ -31,6 +31,7 @@ export default class GitHubPRExtension extends Extension {
         this._settings = this.getSettings();
         this._rawNodes = [];
         this._rawPRItems = [];
+        this._refreshErrors = [];
         this._lastCategories = null;
         this._viewerLogin = this._settings.get_string('last-username') || '';
 
@@ -107,6 +108,7 @@ export default class GitHubPRExtension extends Extension {
         this._repoFilter = null;
         this._rawNodes = [];
         this._rawPRItems = [];
+        this._refreshErrors = [];
         this._lastCategories = null;
     }
 
@@ -116,6 +118,7 @@ export default class GitHubPRExtension extends Extension {
     _clearData() {
         this._rawNodes = [];
         this._rawPRItems = [];
+        this._refreshErrors = [];
         this._lastCategories = null;
         this._indicator.updateCounts(new Map());
         this._indicator.menuView.setLastUpdated(null);
@@ -208,6 +211,7 @@ export default class GitHubPRExtension extends Extension {
             }
             this._indicator.menuView.setUsername(this._viewerLogin);
 
+            this._refreshErrors = errors;
             const { nodes, truncated } = collectPRNodes(data);
             this._rawNodes = nodes;
             const includeTeamReviews = this._settings.get_boolean('include-team-reviews');
@@ -369,6 +373,8 @@ export default class GitHubPRExtension extends Extension {
      * @param {Map<string, Array<PRItem>>} categorizedMap
      */
     _notifyTransitions(categorizedMap) {
+        // Partial data can change or hide categories without a real PR transition.
+        if (this._refreshErrors.length > 0) return;
         const previous = this._lastCategories;
         this._lastCategories = snapshotCategories(categorizedMap);
         if (!previous || !this._settings.get_boolean('notify-on-transition')) return;

@@ -66,8 +66,6 @@ fragment AuthoredPRDetails on PullRequest {
         oid
         signature {
           isValid
-          state
-          wasSignedByGitHub
         }
       }
     }
@@ -152,17 +150,25 @@ fragment SearchPRDetails on PullRequest {
 // lists are capped at MAX_PRS_PER_LIST; pageInfo reports whether more exist.
 export const MAX_PRS_PER_LIST = 30;
 
-export const FETCH_ALL_PRS_QUERY = `
-${AUTHORED_PR_FRAGMENT}
-${SEARCH_PR_FRAGMENT}
+// Each PR list is fetched in small pages: large single queries exceed
+// GitHub's GraphQL execution-time limit (mergeable/mergeStateStatus are
+// expensive computed fields), which the API surfaces as intermittent
+// 502/503 gateway errors. Pages are capped at MAX_PAGES_PER_BUCKET, so the
+// per-list coverage stays at MAX_PRS_PER_LIST.
+export const PRS_PER_PAGE = 10;
+export const MAX_PAGES_PER_BUCKET = 3;
 
-query PullRequestsData {
+export const AUTHORED_PRS_QUERY = `
+${AUTHORED_PR_FRAGMENT}
+
+query AuthoredPullRequests($after: String) {
   viewer {
     login
   }
-  authored: search(query: "type:pr state:open author:@me sort:updated-desc", type: ISSUE, first: ${MAX_PRS_PER_LIST}) {
+  authored: search(query: "type:pr state:open author:@me sort:updated-desc", type: ISSUE, first: ${PRS_PER_PAGE}, after: $after) {
     pageInfo {
       hasNextPage
+      endCursor
     }
     nodes {
       ... on PullRequest {
@@ -170,9 +176,20 @@ query PullRequestsData {
       }
     }
   }
-  reviewRequested: search(query: "type:pr state:open review-requested:@me", type: ISSUE, first: ${MAX_PRS_PER_LIST}) {
+}
+`;
+
+export const REVIEW_REQUESTED_PRS_QUERY = `
+${SEARCH_PR_FRAGMENT}
+
+query ReviewRequestedPullRequests($after: String) {
+  viewer {
+    login
+  }
+  reviewRequested: search(query: "type:pr state:open review-requested:@me sort:updated-desc", type: ISSUE, first: ${PRS_PER_PAGE}, after: $after) {
     pageInfo {
       hasNextPage
+      endCursor
     }
     nodes {
       ... on PullRequest {
@@ -180,9 +197,20 @@ query PullRequestsData {
       }
     }
   }
-  assigned: search(query: "type:pr state:open assignee:@me", type: ISSUE, first: ${MAX_PRS_PER_LIST}) {
+}
+`;
+
+export const ASSIGNED_PRS_QUERY = `
+${AUTHORED_PR_FRAGMENT}
+
+query AssignedPullRequests($after: String) {
+  viewer {
+    login
+  }
+  assigned: search(query: "type:pr state:open assignee:@me sort:updated-desc", type: ISSUE, first: ${PRS_PER_PAGE}, after: $after) {
     pageInfo {
       hasNextPage
+      endCursor
     }
     nodes {
       ... on PullRequest {

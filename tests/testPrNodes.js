@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { collectPRNodes } from '../src/models/prNodes.js';
+import { PRItem, CATEGORIES } from '../src/models/prItem.js';
 
 let passed = 0;
 let failed = 0;
@@ -84,6 +85,35 @@ console.log('--- Testing PR Node Collection ---');
     const { nodes, truncated } = collectPRNodes(legacyResponse);
     assertEqual(nodes.map(n => n.id), ['LEGACY'], 'Supports legacy viewer.pullRequests fallback');
     assert(truncated, 'Truncated when legacy viewer.pullRequests has more pages');
+}
+
+// Review-only fields cannot classify a PR that is also assigned to the viewer
+{
+    const reviewNode = {
+        id: 'OVERLAP',
+        author: { login: 'bob' },
+        isDraft: false,
+        mergeable: 'MERGEABLE',
+        assignees: { nodes: [{ login: 'alice' }] },
+        reviewRequests: { nodes: [{ requestedReviewer: { login: 'alice' } }] },
+        latestReviews: { nodes: [] },
+    };
+    const { nodes } = collectPRNodes(response({ requested: [reviewNode] }));
+    assertEqual(new PRItem(nodes[0], 'alice').category, null,
+        'Missing assigned details do not produce a false owned-PR category');
+    assertEqual(new PRItem(nodes[0], 'alice', { includeAssignedPRs: false }).category, CATEGORIES.NEEDS_MY_REVIEW,
+        'Review-only fields still classify a PR when assigned ownership is disabled');
+
+    const fullNode = {
+        ...reviewNode,
+        reviewDecision: 'APPROVED',
+        mergeStateStatus: 'CLEAN',
+        reviewThreads: { nodes: [] },
+        statusCheckRollup: { state: 'SUCCESS', contexts: { nodes: [] } },
+    };
+    const enriched = collectPRNodes(response({ requested: [reviewNode], assigned: [fullNode] }));
+    assertEqual(new PRItem(enriched.nodes[0], 'alice').category, CATEGORIES.READY_TO_MERGE,
+        'Complete assigned fields restore the correct owned-PR classification');
 }
 
 console.log(`\nPR Node Tests finished: ${passed} passed, ${failed} failed.`);
