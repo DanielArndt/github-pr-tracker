@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/DanielArndt/github-pr-tracker/compare/v0.3.0...v0.3.1) (2026-11-16)
+
+
+### Bug Fixes
+
+* **classifier:** prioritize pending checks over waiting for review ([#22](https://github.com/DanielArndt/github-pr-tracker/issues/22)) ([5fa0db9](https://github.com/DanielArndt/github-pr-tracker/commit/5fa0db95dff90f2d9bb6b8ce00d321c897d190b4))
+
 ## [0.3.0](https://github.com/DanielArndt/github-pr-tracker/compare/v0.2.0...v0.3.0) (2026-10-19)
 
 
