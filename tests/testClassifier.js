@@ -297,6 +297,63 @@ function withChecks({ rollupState, contexts, required = null, mergeStateStatus, 
     assert(pr.reasons.includes('CI Failed'), 'BLOCKED with failing check triggers CI Failed without protection info');
 }
 
+// 3e. Failing nested check run under a required reusable workflow context
+{
+    const pr = new PRItem(withChecks({
+        rollupState: 'FAILURE',
+        required: ['CI / Unit Tests', 'CI / Linting / Lint', 'CI / Integration Tests'],
+        mergeStateStatus: 'BEHIND',
+        reviewDecision: 'APPROVED',
+        contexts: [
+            checkRun('CI / Linting / Lint', 'SUCCESS'),
+            checkRun('CI / Unit Tests / Unit Tests', 'SUCCESS'),
+            checkRun('CI / Integration Tests / Build charm / build', 'SUCCESS'),
+            checkRun('CI / Integration Tests / Integration Tests (microk8s)', 'FAILURE'),
+        ],
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.ACTION_REQUIRED, 'Failing reusable workflow sub-job categorized as ACTION_REQUIRED');
+    assert(pr.reasons.includes('CI Failed'), 'Failing reusable workflow sub-job triggers CI Failed');
+}
+
+// 3f. Draft with failing nested check run under a required reusable workflow context
+{
+    const pr = new PRItem(withChecks({
+        isDraft: true,
+        rollupState: 'FAILURE',
+        required: ['CI / Integration Tests'],
+        mergeStateStatus: 'DRAFT',
+        contexts: [checkRun('CI / Integration Tests / Integration Tests (microk8s)', 'FAILURE')],
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.DRAFT, 'Draft with failing reusable workflow sub-job stays in DRAFT');
+    assertEqual(pr.reasons, ['Draft', 'CI Failed'], 'Draft with failing reusable workflow sub-job has CI Failed badge');
+}
+
+// 3g. Passing nested check runs without exact required context match stay pending, not ready to merge
+{
+    const pr = new PRItem(withChecks({
+        rollupState: 'SUCCESS',
+        required: ['CI / Unit Tests'],
+        mergeStateStatus: 'BLOCKED',
+        reviewDecision: 'APPROVED',
+        contexts: [checkRun('CI / Unit Tests / Unit Tests', 'SUCCESS')],
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.PENDING_CHECKS, 'Missing exact required context stays PENDING_CHECKS even when sub-job passes');
+}
+
+// 3h. Prefix without " / " separator does not match required context
+{
+    const pr = new PRItem(withChecks({
+        rollupState: 'FAILURE',
+        required: ['CI / Integration Tests'],
+        mergeStateStatus: 'UNSTABLE',
+        contexts: [
+            checkRun('CI / Integration Tests', 'SUCCESS'),
+            checkRun('CI / Integration Tests-optional', 'FAILURE'),
+        ],
+    }), viewerLogin);
+    assert(!pr.reasons.includes('CI Failed'), 'Prefix without " / " separator does not trigger CI Failed');
+}
+
 // 4. Failing OPTIONAL CI check should NOT trigger CI Failed
 {
     const pr = new PRItem(withChecks({
