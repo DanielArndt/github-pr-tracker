@@ -598,6 +598,30 @@ function withChecks({ rollupState, contexts, required = null, mergeStateStatus, 
     assertEqual(pr.category, CATEGORIES.READY_TO_MERGE, 'CLEAN PR with stale queued check suites is READY_TO_MERGE');
 }
 
+// 4m. Null rollup with stale queued check suites when branch protection explicitly requires no checks
+{
+    const pr = new PRItem(makePR({
+        reviewDecision: 'REVIEW_REQUIRED',
+        statusCheckRollup: null,
+        mergeStateStatus: 'BLOCKED',
+        baseRef: {
+            name: 'main',
+            branchProtectionRule: { requiredStatusCheckContexts: [] },
+        },
+        headCommit: {
+            nodes: [{
+                commit: {
+                    checkSuites: {
+                        nodes: [checkSuite(null, 'QUEUED'), checkSuite(null, 'QUEUED')],
+                    },
+                },
+            }],
+        },
+    }), viewerLogin);
+    assertEqual(pr.category, CATEGORIES.WAITING_REVIEW, 'PR with zero required checks and stale queued check suites waits on review');
+    assertEqual(pr.reasons, ['Awaiting Review'], 'PR with zero required checks has no Pending Checks pill');
+}
+
 // 5. Action Required: Merge Conflicts
 {
     const pr = new PRItem(makePR({ mergeable: 'CONFLICTING' }), viewerLogin);
