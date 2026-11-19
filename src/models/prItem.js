@@ -273,6 +273,12 @@ function areRequiredChecksPassing(rawNode) {
         });
     }
 
+    // Branch protection exists and explicitly requires zero status checks:
+    // stale QUEUED check suites (e.g. Codecov, Renovate) with a null rollup are not blocking.
+    if (rawNode?.baseRef?.branchProtectionRule && !rollup) {
+        return true;
+    }
+
     if (!rollup || rollup.state === 'SUCCESS') {
         return rollup !== null || checkSuites.length === 0;
     }
