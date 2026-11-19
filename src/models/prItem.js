@@ -86,6 +86,22 @@ function contextName(ctx) {
 }
 
 /**
+ * Whether a check context matches a required branch protection context.
+ * Reusable GitHub Actions workflows prefix their job check runs with the
+ * caller job name (e.g. `CI / Integration Tests / ...` for `CI / Integration Tests`).
+ * @param {Object} ctx CheckRun or StatusContext node
+ * @param {string} requiredName Required status check context name
+ * @returns {boolean}
+ */
+function matchesRequiredContext(ctx, requiredName) {
+    const name = contextName(ctx);
+    if (!name) {
+        return false;
+    }
+    return name === requiredName || name.startsWith(`${requiredName} / `);
+}
+
+/**
  * @param {Object} ctx CheckRun or StatusContext node
  * @returns {boolean} whether the check finished unsuccessfully
  */
@@ -220,7 +236,9 @@ function hasFailingRequiredChecks(rawNode) {
 
     // 1. Branch protection lists the required checks
     if (required.length > 0) {
-        return contexts.some(ctx => required.includes(contextName(ctx)) && isContextFailing(ctx));
+        return contexts.some(
+            ctx => required.some(req => matchesRequiredContext(ctx, req)) && isContextFailing(ctx)
+        );
     }
 
     // 2. Without branch protection info, BLOCKED with a failing rollup means
