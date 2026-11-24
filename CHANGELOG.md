@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.3](https://github.com/DanielArndt/github-pr-tracker/compare/v0.3.2...v0.3.3) (2026-11-19)
+
+
+### Bug Fixes
+
+* **classifier:** detect failed reusable workflow sub-job checks ([#29](https://github.com/DanielArndt/github-pr-tracker/issues/29)) ([8c4e097](https://github.com/DanielArndt/github-pr-tracker/commit/8c4e09711b466d06c5612c0c5f5049f3e6ec4a04))
+* **classifier:** ignore stale queued check suites when no checks are required ([#31](https://github.com/DanielArndt/github-pr-tracker/issues/31)) ([11c6df1](https://github.com/DanielArndt/github-pr-tracker/commit/11c6df11ab637d775ee491248ca4d40a99597bae))
+
 ## [0.3.2](https://github.com/DanielArndt/github-pr-tracker/compare/v0.3.1...v0.3.2) (2026-11-16)
 
 
